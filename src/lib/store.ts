@@ -74,33 +74,47 @@ export const useNotificationStore = create<NotificationStore>((set) => ({
         })),
 }));
 
+interface StructuredMemory {
+    energyLevels: Record<string, any>;
+    taskDurations: Record<string, any>;
+    workingHours: { start: number; end: number; maxExtension: number };
+    preferences: Record<string, any>;
+}
+
 interface MemoryStore {
-    memory: UserMemory[];
+    memory: StructuredMemory | null;
     isLoading: boolean;
-    setMemory: (memory: UserMemory[]) => void;
+    setMemory: (memory: StructuredMemory) => void;
     updateMemory: (type: string, key: string, value: Record<string, unknown>) => void;
     setLoading: (loading: boolean) => void;
 }
 
 export const useMemoryStore = create<MemoryStore>((set) => ({
-    memory: [],
+    memory: null,
     isLoading: false,
     setMemory: (memory) => set({ memory }),
     updateMemory: (type, key, value) =>
         set((state) => {
-            const existingIndex = state.memory.findIndex(
-                (m) => m.memory_type === type && m.key === key
-            );
-            if (existingIndex >= 0) {
-                const newMemory = [...state.memory];
-                newMemory[existingIndex] = {
-                    ...newMemory[existingIndex],
-                    value,
-                    updated_at: new Date().toISOString(),
-                };
-                return { memory: newMemory };
+            if (!state.memory) return state;
+
+            const newMemory = { ...state.memory };
+
+            switch (type) {
+                case "working_hours":
+                    newMemory.workingHours = value as any;
+                    break;
+                case "energy_levels":
+                    newMemory.energyLevels = { ...newMemory.energyLevels, [key]: value };
+                    break;
+                case "task_duration":
+                    newMemory.taskDurations = { ...newMemory.taskDurations, [key]: value };
+                    break;
+                case "preferences":
+                    newMemory.preferences = { ...newMemory.preferences, [key]: value };
+                    break;
             }
-            return state;
+
+            return { memory: newMemory };
         }),
     setLoading: (isLoading) => set({ isLoading }),
 }));

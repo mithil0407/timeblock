@@ -106,7 +106,7 @@ export async function findOptimalSlot({
     const workingHoursMemory = userMemory.find(
         (m) => m.memory_type === "working_hours"
     );
-    const workingHours: WorkingHours = workingHoursMemory?.value as WorkingHours || {
+    const workingHours: WorkingHours = (workingHoursMemory?.value as unknown as WorkingHours) || {
         start: 9,
         end: 18,
     };
@@ -117,7 +117,7 @@ export async function findOptimalSlot({
     );
     const energyMap: EnergyMap = {};
     for (const mem of energyLevelsMemory) {
-        energyMap[mem.key] = mem.value as EnergyLevelMemory;
+        energyMap[mem.key] = mem.value as unknown as EnergyLevelMemory;
     }
 
     // Set up time range for today

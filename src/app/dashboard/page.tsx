@@ -325,8 +325,8 @@ export default function DashboardPage() {
                         <div className="hidden lg:block h-[calc(100vh-140px)] sticky top-[88px]">
                             <CalendarView
                                 tasks={tasks as Task[]}
-                                workingHours={(memory as Record<string, unknown>)?.workingHours as { start: number; end: number } || undefined}
-                                energyLevels={(memory as Record<string, unknown>)?.energyLevels as Record<string, { level: string }> || undefined}
+                                workingHours={memory?.workingHours}
+                                energyLevels={memory?.energyLevels}
                             />
                         </div>
                     )}
