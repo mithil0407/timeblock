@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { getOrCreateUserByEmail } from "@/lib/supabase/user";
 import { cookies } from "next/headers";
 import { parseTaskInput, estimateTaskDuration, assessPriority } from "@/lib/gemini";
 import { findOptimalSlot, calculatePriority } from "@/lib/scheduling";
@@ -17,16 +18,8 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user
-    const { data: user } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", email)
-        .single();
-
-    if (!user) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    // Get or create user
+    const user = await getOrCreateUserByEmail(email);
 
     // Parse query params
     const searchParams = request.nextUrl.searchParams;

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { createAdminClient } from "@/lib/supabase/server";
+import { getOrCreateUserByEmail } from "@/lib/supabase/user";
 import { cookies } from "next/headers";
 
 // GET /api/user - Get current user
 export async function GET() {
-    const supabase = createAdminClient();
     const cookieStore = await cookies();
     const email = cookieStore.get("tb_email")?.value;
 
@@ -12,24 +11,21 @@ export async function GET() {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: user, error } = await supabase
-        .from("users")
-        .select("id, email, has_completed_onboarding, created_at")
-        .eq("email", email)
-        .single();
+    try {
+        const user = await getOrCreateUserByEmail(email);
 
-    if (error || !user) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
+        return NextResponse.json({
+            user: {
+                id: user.id,
+                email: user.email,
+                hasCompletedOnboarding: user.has_completed_onboarding,
+                hasGoogleCalendar: true, // They authenticated with Google
+            },
+        });
+    } catch (error) {
+        console.error("Failed to load user:", error);
+        return NextResponse.json({ error: "Server misconfigured" }, { status: 500 });
     }
-
-    return NextResponse.json({
-        user: {
-            id: user.id,
-            email: user.email,
-            hasCompletedOnboarding: user.has_completed_onboarding,
-            hasGoogleCalendar: true, // They authenticated with Google
-        },
-    });
 }
 
 // POST /api/user/logout - Logout

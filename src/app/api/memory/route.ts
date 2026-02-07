@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { getOrCreateUserByEmail } from "@/lib/supabase/user";
 import { cookies } from "next/headers";
 
 // GET /api/memory - Get user memory
@@ -12,15 +13,7 @@ export async function GET() {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: user } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", email)
-        .single();
-
-    if (!user) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    const user = await getOrCreateUserByEmail(email);
 
     const { data: memory, error } = await supabase
         .from("user_memory")
@@ -70,15 +63,7 @@ export async function PUT(request: NextRequest) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { data: user } = await supabase
-        .from("users")
-        .select("id")
-        .eq("email", email)
-        .single();
-
-    if (!user) {
-        return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
+    const user = await getOrCreateUserByEmail(email);
 
     try {
         const body = await request.json();

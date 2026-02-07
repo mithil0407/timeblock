@@ -31,7 +31,16 @@ export default function DashboardPage() {
             try {
                 const res = await fetch("/api/user");
                 if (!res.ok) {
-                    router.push("/login");
+                    if (res.status === 401) {
+                        router.push("/login");
+                        return;
+                    }
+                    const payload = await res.json().catch(() => null);
+                    toast({
+                        title: "Unable to load user",
+                        description: payload?.error || "Please try again.",
+                        variant: "destructive",
+                    });
                     return;
                 }
                 const data = await res.json();
@@ -45,11 +54,15 @@ export default function DashboardPage() {
                     router.push("/onboarding");
                 }
             } catch {
-                router.push("/login");
+                toast({
+                    title: "Unable to load user",
+                    description: "Network error. Please try again.",
+                    variant: "destructive",
+                });
             }
         }
         fetchUser();
-    }, [router, setUser]);
+    }, [router, setUser, toast]);
 
     // Fetch tasks
     useEffect(() => {

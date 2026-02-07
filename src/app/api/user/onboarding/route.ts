@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+import { getOrCreateUserByEmail } from "@/lib/supabase/user";
 import { cookies } from "next/headers";
 
 // POST /api/user/onboarding - Mark onboarding as complete
@@ -12,10 +13,11 @@ export async function POST() {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const user = await getOrCreateUserByEmail(email);
     const { error } = await supabase
         .from("users")
         .update({ has_completed_onboarding: true })
-        .eq("email", email);
+        .eq("id", user.id);
 
     if (error) {
         console.error("Error updating onboarding status:", error);

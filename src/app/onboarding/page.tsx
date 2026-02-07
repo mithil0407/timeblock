@@ -67,7 +67,7 @@ export default function OnboardingPage() {
     
     try {
       // Save working hours
-      await fetch("/api/memory", {
+      const workingHoursRes = await fetch("/api/memory", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -76,10 +76,13 @@ export default function OnboardingPage() {
           value: workingHours,
         }),
       });
+      if (!workingHoursRes.ok) {
+        throw new Error("Failed to save working hours");
+      }
 
       // Save energy levels
       for (const energy of energyLevels) {
-        await fetch("/api/memory", {
+        const energyRes = await fetch("/api/memory", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -88,12 +91,18 @@ export default function OnboardingPage() {
             value: { level: energy.level, suitable_for: getSuitableTaskTypes(energy.level) },
           }),
         });
+        if (!energyRes.ok) {
+          throw new Error("Failed to save energy levels");
+        }
       }
 
       // Mark onboarding as complete
-      await fetch("/api/user/onboarding", {
+      const onboardingRes = await fetch("/api/user/onboarding", {
         method: "POST",
       });
+      if (!onboardingRes.ok) {
+        throw new Error("Failed to complete onboarding");
+      }
 
       toast({
         title: "You're all set!",
