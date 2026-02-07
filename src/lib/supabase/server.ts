@@ -1,5 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 export async function createClient() {
@@ -44,7 +44,7 @@ export function createAdminClient() {
         throw new Error("Missing Supabase admin credentials");
     }
 
-    return createClient(url, serviceKey, {
+    return createSupabaseClient(url, serviceKey, {
         auth: { persistSession: false },
     });
 }
