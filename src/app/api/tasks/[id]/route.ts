@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { updateEvent, deleteEvent } from "@/lib/google-calendar";
 import { setCredentials } from "@/lib/google-auth";
 import { findOptimalSlot, getEndOfDay, getStartOfDay } from "@/lib/scheduling";
 import type { UpdateTaskRequest, Task, UserMemory } from "@/lib/types";
 
-type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
+type SupabaseClient = ReturnType<typeof createAdminClient>;
 
 // GET /api/tasks/[id] - Get single task
 export async function GET(
@@ -14,7 +14,7 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const cookieStore = await cookies();
     const email = cookieStore.get("tb_email")?.value;
 
@@ -52,7 +52,7 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const cookieStore = await cookies();
     const email = cookieStore.get("tb_email")?.value;
 
@@ -222,7 +222,7 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const cookieStore = await cookies();
     const email = cookieStore.get("tb_email")?.value;
 

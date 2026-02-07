@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
 export default async function HomePage() {
@@ -9,7 +9,7 @@ export default async function HomePage() {
 
     if (email) {
         // Verify user still exists
-        const supabase = await createClient();
+        const supabase = createAdminClient();
         const { data: user } = await supabase
             .from("users")
             .select("id")

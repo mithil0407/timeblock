@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
 // GET /api/notifications - List notifications
 export async function GET(request: NextRequest) {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const cookieStore = await cookies();
     const email = cookieStore.get("tb_email")?.value;
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { parseTaskInput, estimateTaskDuration, assessPriority } from "@/lib/gemini";
 import { findOptimalSlot, calculatePriority } from "@/lib/scheduling";
@@ -9,7 +9,7 @@ import type { CreateTaskRequest, CreateTaskResponse, Task } from "@/lib/types";
 
 // GET /api/tasks - List tasks
 export async function GET(request: NextRequest) {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const cookieStore = await cookies();
     const email = cookieStore.get("tb_email")?.value;
 
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/tasks - Create new task
 export async function POST(request: NextRequest) {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const cookieStore = await cookies();
     const email = cookieStore.get("tb_email")?.value;
 

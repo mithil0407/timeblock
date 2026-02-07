@@ -1,15 +1,25 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, Brain, Calendar, Sparkles } from "lucide-react";
 
 export default async function LoginPage() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const cookieStore = await cookies();
+    const email = cookieStore.get("tb_email")?.value;
 
-    if (user) {
-        redirect("/dashboard");
+    if (email) {
+        const supabase = createAdminClient();
+        const { data: user } = await supabase
+            .from("users")
+            .select("has_completed_onboarding")
+            .eq("email", email)
+            .single();
+
+        if (user) {
+            redirect(user.has_completed_onboarding ? "/dashboard" : "/onboarding");
+        }
     }
 
     return (

@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 
 // POST /api/user/onboarding - Mark onboarding as complete
 export async function POST() {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const cookieStore = await cookies();
     const email = cookieStore.get("tb_email")?.value;
 

@@ -41,6 +41,9 @@ export default function DashboardPage() {
                     hasGoogleCalendar: data.user.hasGoogleCalendar,
                     hasCompletedOnboarding: data.user.hasCompletedOnboarding,
                 });
+                if (!data.user.hasCompletedOnboarding) {
+                    router.push("/onboarding");
+                }
             } catch {
                 router.push("/login");
             }

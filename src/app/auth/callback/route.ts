@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/server";
 import { getTokensFromCode } from "@/lib/google-auth";
 import { google } from "googleapis";
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Create or update user in Supabase
-        const supabase = await createClient();
+        const supabase = createAdminClient();
 
         // Sign in with Supabase using Google OAuth
         // Since we're doing manual OAuth, we'll create a magic link session
@@ -81,17 +81,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Sign in with Supabase Auth
-        const { error: signInError } = await supabase.auth.signInWithOAuth({
-            provider: "google",
-            options: {
-                redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
-            },
-        });
-
-        if (signInError) {
-            console.error("Supabase sign in error:", signInError);
-            // Continue anyway - we have the user data
-        }
+        // Supabase Auth is not used for session here; tb_email cookie drives auth.
 
         // Set a cookie to indicate authenticated state
         // Redirect new users or those who haven't completed onboarding
