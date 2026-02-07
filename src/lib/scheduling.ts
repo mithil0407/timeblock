@@ -9,6 +9,7 @@ interface EnergyMap {
 interface WorkingHours {
     start: number;
     end: number;
+    maxExtension?: number;
 }
 
 function getEnergyForTimeSlot(
@@ -94,6 +95,8 @@ export async function findOptimalSlot({
     energyRequirement,
     userMemory,
     existingTasks,
+    ignoreEventIds,
+    busySlots,
 }: {
     auth: OAuth2Client;
     duration: number;
@@ -101,6 +104,8 @@ export async function findOptimalSlot({
     energyRequirement: "high" | "medium" | "low";
     userMemory: UserMemory[];
     existingTasks: Task[];
+    ignoreEventIds?: string[];
+    busySlots?: FreeSlot[];
 }): Promise<FreeSlot | null> {
     // Get working hours from memory
     const workingHoursMemory = userMemory.find(
@@ -109,6 +114,7 @@ export async function findOptimalSlot({
     const workingHours: WorkingHours = (workingHoursMemory?.value as unknown as WorkingHours) || {
         start: 9,
         end: 18,
+        maxExtension: 3,
     };
 
     // Get energy levels from memory
@@ -135,14 +141,21 @@ export async function findOptimalSlot({
     endTime.setHours(workingHours.end, 0, 0, 0);
 
     // Find free slots
-    const freeSlots = await findFreeSlots(auth, startTime, endTime, duration);
+    const freeSlots = await findFreeSlots(auth, startTime, endTime, duration, {
+        ignoreEventIds,
+        busySlots,
+    });
 
     if (freeSlots.length === 0) {
         // Try extending working hours
         const extendedEndTime = new Date(today);
-        extendedEndTime.setHours(workingHours.end + 3, 0, 0, 0); // Max 3 hours extension
+        const maxExtension = workingHours.maxExtension ?? 3;
+        extendedEndTime.setHours(workingHours.end + maxExtension, 0, 0, 0);
 
-        const extendedSlots = await findFreeSlots(auth, endTime, extendedEndTime, duration);
+        const extendedSlots = await findFreeSlots(auth, endTime, extendedEndTime, duration, {
+            ignoreEventIds,
+            busySlots,
+        });
         if (extendedSlots.length > 0) {
             return extendedSlots[0];
         }

@@ -3,7 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
 import { updateEvent, deleteEvent } from "@/lib/google-calendar";
 import { setCredentials } from "@/lib/google-auth";
-import type { UpdateTaskRequest } from "@/lib/types";
+import { findOptimalSlot, getEndOfDay, getStartOfDay } from "@/lib/scheduling";
+import type { UpdateTaskRequest, Task, UserMemory } from "@/lib/types";
+
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 // GET /api/tasks/[id] - Get single task
 export async function GET(
@@ -158,27 +161,51 @@ export async function PATCH(
             }
         }
 
-        // Log schedule change
-        if (status === "completed" || priority !== undefined || deadline !== undefined) {
-            await supabase.from("schedule_changes").insert({
-                user_id: user.id,
-                trigger_type:
-                    status === "completed"
-                        ? "task_completed_early"
-                        : priority !== undefined
-                            ? "priority_changed"
-                            : "deadline_changed",
-                trigger_task_id: id,
-                changes_made: [
-                    {
-                        taskId: id,
-                        previousStart: existingTask.scheduled_start,
-                        previousEnd: existingTask.scheduled_end,
-                        newStart: scheduled_start || existingTask.scheduled_start,
-                        newEnd: scheduled_end || existingTask.scheduled_end,
-                        action: "updated",
-                    },
-                ],
+        // Update memory and reschedule when needed
+        if (status === "completed") {
+            const actualMinutes = updatedTask.actual_duration_minutes as number | null;
+            await updateTaskDurationMemory(
+                supabase,
+                user.id,
+                existingTask.task_category,
+                actualMinutes
+            );
+            await updateTaskEnergyMemory(
+                supabase,
+                user.id,
+                existingTask.task_category,
+                existingTask.energy_requirement
+            );
+
+            const estimated = existingTask.estimated_duration_minutes;
+            const timeSaved = actualMinutes ? Math.max(0, estimated - actualMinutes) : 0;
+            if (timeSaved >= 5 && user.google_access_token) {
+                const auth = setCredentials({
+                    access_token: user.google_access_token,
+                    refresh_token: user.google_refresh_token,
+                });
+
+                await rescheduleRemainingTasks({
+                    supabase,
+                    user,
+                    auth,
+                    triggerType: "task_completed_early",
+                    excludeTaskId: id,
+                });
+            }
+        }
+
+        if ((priority !== undefined || deadline !== undefined) && user.google_access_token) {
+            const auth = setCredentials({
+                access_token: user.google_access_token,
+                refresh_token: user.google_refresh_token,
+            });
+
+            await rescheduleRemainingTasks({
+                supabase,
+                user,
+                auth,
+                triggerType: priority !== undefined ? "priority_changed" : "deadline_changed",
             });
         }
 
@@ -266,4 +293,224 @@ export async function DELETE(
     });
 
     return NextResponse.json({ success: true });
+}
+
+async function updateTaskDurationMemory(
+    supabase: SupabaseClient,
+    userId: string,
+    taskCategory: string | null,
+    actualDurationMinutes: number | null
+) {
+    if (!taskCategory || !actualDurationMinutes) return;
+
+    const { data: existing } = await supabase
+        .from("user_memory")
+        .select("value")
+        .eq("user_id", userId)
+        .eq("memory_type", "task_duration")
+        .eq("key", taskCategory)
+        .single();
+
+    const existingValue = existing?.value as
+        | { average_minutes?: number; sample_count?: number }
+        | undefined;
+
+    const prevAvg = existingValue?.average_minutes ?? actualDurationMinutes;
+    const prevCount = existingValue?.sample_count ?? 0;
+    const nextCount = prevCount + 1;
+    const nextAvg = Math.round((prevAvg * prevCount + actualDurationMinutes) / nextCount);
+
+    await supabase.from("user_memory").upsert(
+        {
+            user_id: userId,
+            memory_type: "task_duration",
+            key: taskCategory,
+            value: {
+                average_minutes: nextAvg,
+                sample_count: nextCount,
+                last_updated: new Date().toISOString(),
+            },
+        },
+        { onConflict: "user_id,memory_type,key" }
+    );
+}
+
+async function updateTaskEnergyMemory(
+    supabase: SupabaseClient,
+    userId: string,
+    taskCategory: string | null,
+    energyRequirement: string | null
+) {
+    if (!taskCategory || !energyRequirement) return;
+
+    await supabase.from("user_memory").upsert(
+        {
+            user_id: userId,
+            memory_type: "task_energy",
+            key: taskCategory,
+            value: {
+                energy_requirement: energyRequirement,
+                task_category: taskCategory,
+            },
+        },
+        { onConflict: "user_id,memory_type,key" }
+    );
+}
+
+async function rescheduleRemainingTasks({
+    supabase,
+    user,
+    auth,
+    triggerType,
+    excludeTaskId,
+}: {
+    supabase: SupabaseClient;
+    user: { id: string; google_access_token: string | null; google_refresh_token: string | null };
+    auth: ReturnType<typeof setCredentials>;
+    triggerType: "task_completed_early" | "priority_changed" | "deadline_changed";
+    excludeTaskId?: string;
+}) {
+    const { data: userMemory } = await supabase
+        .from("user_memory")
+        .select("*")
+        .eq("user_id", user.id);
+
+    const { data: tasks } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "scheduled");
+
+    const startOfDay = getStartOfDay();
+    const endOfDay = getEndOfDay();
+    const now = new Date();
+
+    const tasksToReschedule = (tasks || [])
+        .filter((task: Task) => task.id !== excludeTaskId)
+        .filter((task: Task) => {
+            if (!task.scheduled_start) return true;
+            const scheduled = new Date(task.scheduled_start);
+            return scheduled >= now && scheduled >= startOfDay && scheduled <= endOfDay;
+        })
+        .sort((a: Task, b: Task) => {
+            if (a.priority !== b.priority) return b.priority - a.priority;
+            const aDeadline = a.deadline ? new Date(a.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+            const bDeadline = b.deadline ? new Date(b.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+            if (aDeadline !== bDeadline) return aDeadline - bDeadline;
+            const aStart = a.scheduled_start ? new Date(a.scheduled_start).getTime() : Number.MAX_SAFE_INTEGER;
+            const bStart = b.scheduled_start ? new Date(b.scheduled_start).getTime() : Number.MAX_SAFE_INTEGER;
+            return aStart - bStart;
+        });
+
+    if (tasksToReschedule.length === 0) return;
+
+    const ignoreEventIds = tasksToReschedule
+        .map((t: Task) => t.google_calendar_event_id)
+        .filter((id): id is string => Boolean(id));
+
+    const busySlots: Array<{ start: Date; end: Date }> = [];
+    const plannedTasks: Task[] = [];
+    const changes: Array<{
+        taskId: string;
+        previousStart?: string;
+        previousEnd?: string;
+        newStart?: string;
+        newEnd?: string;
+        action: "updated";
+    }> = [];
+
+    for (const task of tasksToReschedule) {
+        const slot = await findOptimalSlot({
+            auth,
+            duration: task.estimated_duration_minutes,
+            priority: task.priority,
+            energyRequirement: (task.energy_requirement || "medium") as "high" | "medium" | "low",
+            userMemory: (userMemory || []) as UserMemory[],
+            existingTasks: plannedTasks,
+            ignoreEventIds,
+            busySlots,
+        });
+
+        const fallbackSlot =
+            task.scheduled_start && task.scheduled_end
+                ? {
+                    start: new Date(task.scheduled_start),
+                    end: new Date(task.scheduled_end),
+                }
+                : null;
+
+        const chosen = slot || fallbackSlot;
+        if (chosen) {
+            busySlots.push({ start: chosen.start, end: chosen.end });
+        }
+
+        if (!slot) {
+            if (fallbackSlot) {
+                plannedTasks.push({
+                    ...task,
+                    scheduled_start: fallbackSlot.start.toISOString(),
+                    scheduled_end: fallbackSlot.end.toISOString(),
+                });
+            }
+            continue;
+        }
+
+        const previousStart = task.scheduled_start;
+        const previousEnd = task.scheduled_end;
+        const newStart = slot.start.toISOString();
+        const newEnd = slot.end.toISOString();
+
+        if (previousStart !== newStart || previousEnd !== newEnd) {
+            if (task.google_calendar_event_id) {
+                try {
+                    await updateEvent(auth, task.google_calendar_event_id, {
+                        start: slot.start,
+                        end: slot.end,
+                    });
+                } catch (calError) {
+                    console.error("Failed to update calendar event:", calError);
+                }
+            }
+
+            await supabase
+                .from("tasks")
+                .update({
+                    scheduled_start: newStart,
+                    scheduled_end: newEnd,
+                })
+                .eq("id", task.id);
+
+            changes.push({
+                taskId: task.id,
+                previousStart,
+                previousEnd,
+                newStart,
+                newEnd,
+                action: "updated",
+            });
+        }
+
+        plannedTasks.push({
+            ...task,
+            scheduled_start: newStart,
+            scheduled_end: newEnd,
+        });
+    }
+
+    if (changes.length > 0) {
+        await supabase.from("schedule_changes").insert({
+            user_id: user.id,
+            trigger_type: triggerType,
+            trigger_task_id: excludeTaskId || null,
+            changes_made: changes,
+            ai_reasoning: "Heuristic reschedule based on availability and priorities",
+        });
+
+        await supabase.from("notifications").insert({
+            user_id: user.id,
+            type: "schedule_updated",
+            title: "Schedule Updated",
+            message: "Your schedule has been updated based on your latest changes.",
+        });
+    }
 }

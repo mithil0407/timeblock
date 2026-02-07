@@ -1,0 +1,2031 @@
+# Product Requirements Document: AI-Powered Time Blocking Assistant
+
+## 1. Product Overview
+
+### 1.1 Product Vision
+An autonomous AI agent that intelligently manages your daily schedule by automatically time-blocking tasks on Google Calendar based on your work patterns, energy levels, and priorities. The system eliminates scheduling friction by making smart decisions while allowing manual override when needed.
+
+### 1.2 Core Value Proposition
+- Zero-friction task entry with intelligent scheduling
+- Autonomous calendar management with human oversight
+- Energy-optimized task placement
+- Dynamic rescheduling based on actual completion times
+- Learning from your historical work patterns
+
+---
+
+## 2. Technical Stack
+
+### 2.1 Infrastructure
+- **Frontend Hosting**: Vercel
+- **Backend**: Supabase (PostgreSQL database, Edge Functions)
+- **AI Model**: Google Gemini API
+- **Calendar Integration**: Google Calendar API
+- **Authentication**: Supabase Auth with Google OAuth
+
+### 2.2 Frontend Technologies
+- **Framework**: Next.js 14+ (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: shadcn/ui (for Notion/Apple-like aesthetic)
+- **State Management**: React Context + Zustand for complex state
+- **Forms**: React Hook Form with Zod validation
+- **Calendar Visualization**: react-big-calendar or custom component
+
+### 2.3 Backend Technologies
+- **Database**: Supabase PostgreSQL
+- **Real-time**: Supabase Realtime subscriptions
+- **Edge Functions**: Supabase Edge Functions (Deno)
+- **Cron Jobs**: Supabase pg_cron or external cron service
+- **API Routes**: Next.js API routes for frontend-backend communication
+
+---
+
+## 3. System Architecture
+
+### 3.1 High-Level Architecture
+
+```
+User Input (Dashboard)
+    ↓
+Next.js Frontend
+    ↓
+API Routes / Supabase Edge Functions
+    ↓
+┌─────────────────┬─────────────────┬─────────────────┐
+│   Gemini API    │  Google Cal API │   Supabase DB   │
+│  (Intelligence) │   (Scheduling)  │   (Persistence) │
+└─────────────────┴─────────────────┴─────────────────┘
+```
+
+### 3.2 Data Flow
+
+**Adding a Task:**
+1. User enters task in dashboard
+2. Frontend validates and sends to API
+3. API retrieves user's memory document and current calendar state
+4. Gemini analyzes: task duration, priority, best time slot
+5. System blocks time on Google Calendar
+6. Database updated with task record
+7. Frontend receives update via real-time subscription
+8. Dashboard shows scheduled task
+
+**Completing a Task Early:**
+1. User marks task complete
+2. System calculates time saved
+3. Gemini re-evaluates remaining schedule
+4. Google Calendar updated with new blocks
+5. Database updated
+6. Dashboard shows revised schedule
+
+---
+
+## 4. Database Schema
+
+### 4.1 Tables
+
+#### `users`
+```sql
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email TEXT UNIQUE NOT NULL,
+    google_calendar_id TEXT,
+    google_refresh_token TEXT ENCRYPTED,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `user_memory`
+```sql
+CREATE TABLE user_memory (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    memory_type TEXT NOT NULL, -- 'task_duration', 'energy_levels', 'preferences'
+    key TEXT NOT NULL, -- e.g., 'edit_ad', '09:00-11:00'
+    value JSONB NOT NULL, -- flexible structure for different memory types
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, memory_type, key)
+);
+```
+
+Example memory entries:
+```json
+// Task duration
+{
+  "memory_type": "task_duration",
+  "key": "edit_ad",
+  "value": {
+    "average_minutes": 90,
+    "sample_count": 15,
+    "last_updated": "2026-02-01T10:00:00Z"
+  }
+}
+
+// Energy levels
+{
+  "memory_type": "energy_levels",
+  "key": "09:00-11:00",
+  "value": {
+    "level": "high",
+    "suitable_for": ["creative", "deep_work"]
+  }
+}
+
+// Task type energy requirement
+{
+  "memory_type": "task_energy",
+  "key": "edit_ad",
+  "value": {
+    "energy_requirement": "high",
+    "task_category": "creative"
+  }
+}
+```
+
+#### `tasks`
+```sql
+CREATE TABLE tasks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    estimated_duration_minutes INTEGER NOT NULL,
+    actual_duration_minutes INTEGER, -- filled when completed
+    priority INTEGER NOT NULL, -- 1-5, calculated by AI
+    deadline TIMESTAMPTZ,
+    scheduled_start TIMESTAMPTZ,
+    scheduled_end TIMESTAMPTZ,
+    status TEXT NOT NULL DEFAULT 'scheduled', -- 'scheduled', 'in_progress', 'completed', 'cancelled'
+    google_calendar_event_id TEXT,
+    task_category TEXT, -- 'creative', 'admin', 'meetings', etc.
+    energy_requirement TEXT, -- 'high', 'medium', 'low'
+    context TEXT, -- additional user-provided context
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX idx_tasks_user_status ON tasks(user_id, status);
+CREATE INDEX idx_tasks_scheduled_start ON tasks(scheduled_start);
+```
+
+#### `schedule_changes`
+```sql
+CREATE TABLE schedule_changes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    trigger_type TEXT NOT NULL, -- 'task_added', 'task_completed_early', 'priority_changed', 'deadline_changed'
+    trigger_task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+    changes_made JSONB NOT NULL, -- array of changes made to calendar
+    ai_reasoning TEXT, -- Gemini's explanation for the changes
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `notifications`
+```sql
+CREATE TABLE notifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    type TEXT NOT NULL, -- 'schedule_updated', 'task_blocked', 'conflict_detected'
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    related_task_id UUID REFERENCES tasks(id) ON DELETE CASCADE,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read, created_at);
+```
+
+---
+
+## 5. Core Features & Functionality
+
+### 5.1 User Onboarding
+
+**Initial Setup Flow:**
+
+1. **Authentication**
+   - Google OAuth sign-in
+   - Request Calendar read/write permissions
+   - Store refresh token securely
+
+2. **Memory Document Creation**
+   - Guided wizard to set up initial memory
+   - Sections:
+     - **Energy Levels**: Time blocks with energy ratings
+       - UI: Interactive timeline where user drags to create blocks
+       - Each block: time range + energy level (high/medium/low)
+     - **Common Tasks**: Pre-populate with common task types
+       - UI: Add task name + typical duration
+       - Optional: energy requirement, category
+     - **Work Hours**: Default working hours
+       - Start time, end time
+       - Days of week
+     - **Preferences**:
+       - Maximum working hours per day (default: 8, can extend)
+       - Break preferences (duration, frequency)
+       - Buffer time between tasks
+
+3. **First Task Exercise**
+   - Walk user through adding their first task
+   - Show AI reasoning for the scheduled time
+   - Explain how to adjust priorities
+
+### 5.2 Dashboard UI/UX
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────────────┐
+│  [Logo] Time Block AI            [Settings] [Profile]   │
+├─────────────────────────────────────────────────────────┤
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Add New Task                                     │  │
+│  │  ┌────────────────────────────────────────────┐  │  │
+│  │  │ "Edit ad for Client X..."                  │  │  │
+│  │  └────────────────────────────────────────────┘  │  │
+│  │  [Optional: Add deadline] [Optional: Add notes]  │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────┬────────────────────────────────┐ │
+│  │  Today's Tasks   │  Calendar View                 │ │
+│  │                  │                                 │ │
+│  │  ☐ 9:00-10:30   │  [Visual timeline showing       │ │
+│  │    Edit ad       │   time blocks for the day]     │ │
+│  │    Priority: 3   │                                 │ │
+│  │    [⋮]          │                                 │ │
+│  │                  │                                 │ │
+│  │  ☐ 11:00-12:00  │                                 │ │
+│  │    Write script  │                                 │ │
+│  │    Priority: 2   │                                 │ │
+│  │    [⋮]          │                                 │ │
+│  │                  │                                 │ │
+│  └──────────────────┴────────────────────────────────┘ │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Recent Changes                                   │  │
+│  │  • "Edit ad" scheduled for 9:00 AM               │  │
+│  │  • "Write script" moved from 2:00 PM to 11:00 AM│  │
+│  └──────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Design Principles:**
+- **Notion-like aesthetics**: Clean, minimal, lots of white space
+- **Apple-like interactions**: Smooth animations, intuitive gestures
+- **Color palette**: 
+  - Background: #FFFFFF / #F7F7F7
+  - Text: #37352F (primary), #787774 (secondary)
+  - Accent: Subtle blue/purple for priorities
+  - Energy indicators: Green (high), Yellow (medium), Red (low)
+- **Typography**: 
+  - SF Pro / Inter for UI
+  - Clear hierarchy with font weights
+- **Micro-interactions**:
+  - Smooth drag-and-drop for priority changes
+  - Satisfying checkmark animation on completion
+  - Subtle pulse on newly scheduled tasks
+
+### 5.3 Task Input & Processing
+
+**Input Methods:**
+
+1. **Quick Add (Primary)**
+   - Single text field: "What do you need to do?"
+   - Natural language processing via Gemini
+   - Examples:
+     - "Edit ad" → AI infers from memory
+     - "Edit ad for Nike, due tomorrow" → AI extracts deadline
+     - "Write 3 scripts for social media" → AI estimates duration
+   - Press Enter to submit
+
+2. **Detailed Add (Optional)**
+   - Expandable form with:
+     - Task title (required)
+     - Description/context (optional)
+     - Deadline (optional, date-time picker)
+     - Manual duration override (optional)
+     - Category (optional, dropdown)
+
+**Processing Flow:**
+
+```javascript
+async function processNewTask(userInput, userId) {
+  // 1. Parse input with Gemini
+  const parsed = await gemini.parse({
+    input: userInput,
+    context: await getUserMemory(userId)
+  });
+  
+  // 2. Determine duration
+  const duration = parsed.explicitDuration || 
+                   await getHistoricalDuration(parsed.taskType, userId) ||
+                   await gemini.estimateDuration(parsed.description);
+  
+  // 3. Calculate priority
+  const priority = await calculatePriority({
+    deadline: parsed.deadline,
+    taskType: parsed.taskType,
+    existingTasks: await getTodaysTasks(userId)
+  });
+  
+  // 4. Find optimal time slot
+  const timeSlot = await findOptimalSlot({
+    duration,
+    priority,
+    energyRequirement: await getEnergyRequirement(parsed.taskType, userId),
+    calendar: await getGoogleCalendar(userId),
+    userMemory: await getUserMemory(userId)
+  });
+  
+  // 5. Create calendar event
+  const eventId = await createGoogleCalendarEvent({
+    summary: parsed.title,
+    start: timeSlot.start,
+    end: timeSlot.end,
+    description: parsed.description
+  });
+  
+  // 6. Save to database
+  const task = await createTask({
+    userId,
+    title: parsed.title,
+    duration,
+    priority,
+    scheduledStart: timeSlot.start,
+    scheduledEnd: timeSlot.end,
+    googleCalendarEventId: eventId,
+    ...parsed
+  });
+  
+  // 7. Create notification
+  await createNotification({
+    userId,
+    type: 'task_blocked',
+    title: 'Task Scheduled',
+    message: `"${parsed.title}" scheduled for ${formatTime(timeSlot.start)}`
+  });
+  
+  return task;
+}
+```
+
+### 5.4 Priority Calculation Algorithm
+
+**Priority Score (1-5):**
+
+```javascript
+async function calculatePriority({ deadline, taskType, existingTasks }) {
+  let score = 3; // Base priority
+  
+  // Deadline urgency (most important factor)
+  if (deadline) {
+    const hoursUntilDeadline = (deadline - Date.now()) / (1000 * 60 * 60);
+    
+    if (hoursUntilDeadline <= 4) score = 5;      // Due within 4 hours
+    else if (hoursUntilDeadline <= 24) score = 4; // Due today
+    else if (hoursUntilDeadline <= 48) score = 3; // Due tomorrow
+    else if (hoursUntilDeadline <= 168) score = 2; // Due this week
+    else score = 1; // Due later
+  }
+  
+  // Task type consideration
+  // If multiple tasks of same type, first-come-first-served
+  const sameTypeTasks = existingTasks.filter(t => t.category === taskType);
+  if (sameTypeTasks.length === 0 && taskType === 'client_work') {
+    score = Math.min(5, score + 1); // Boost client work slightly
+  }
+  
+  // Use Gemini for nuanced priority in edge cases
+  if (!deadline && taskType === 'unknown') {
+    const geminiPriority = await gemini.assessPriority({
+      task: taskType,
+      context: existingTasks
+    });
+    score = geminiPriority;
+  }
+  
+  return Math.max(1, Math.min(5, score)); // Clamp between 1-5
+}
+```
+
+### 5.5 Optimal Time Slot Finding
+
+**Algorithm:**
+
+```javascript
+async function findOptimalSlot({ duration, priority, energyRequirement, calendar, userMemory }) {
+  const today = new Date();
+  const workingHours = userMemory.workingHours; // e.g., { start: 9, end: 18 }
+  const energyMap = userMemory.energyLevels; // e.g., { "09:00-11:00": "high", ... }
+  
+  // 1. Get all free slots in working hours
+  const freeSlots = await findFreeSlots({
+    calendar,
+    startTime: setHours(today, workingHours.start),
+    endTime: setHours(today, workingHours.end),
+    duration
+  });
+  
+  // 2. Score each slot
+  const scoredSlots = freeSlots.map(slot => {
+    let score = 0;
+    
+    // Energy match: +10 points if slot energy matches requirement
+    const slotEnergy = getEnergyForTimeSlot(slot, energyMap);
+    if (slotEnergy === energyRequirement) score += 10;
+    else if (slotEnergy === 'high' && energyRequirement === 'medium') score += 5;
+    
+    // Earlier is better for high priority: +5 points for morning
+    if (priority >= 4 && slot.start.getHours() < 12) score += 5;
+    
+    // Proximity to existing tasks: +3 points if adjacent (minimize context switching)
+    if (isAdjacentToExistingTask(slot, calendar)) score += 3;
+    
+    // Sooner is better for urgent tasks
+    const hoursFromNow = (slot.start - Date.now()) / (1000 * 60 * 60);
+    if (priority >= 4) score += Math.max(0, 10 - hoursFromNow);
+    
+    return { slot, score };
+  });
+  
+  // 3. If no free slots, extend working hours
+  if (scoredSlots.length === 0) {
+    const extendedSlot = await extendWorkingHours({
+      workingHours,
+      duration,
+      calendar,
+      maxExtension: 3 * 60 // Max 3 hours extension
+    });
+    return extendedSlot;
+  }
+  
+  // 4. Return highest scoring slot
+  scoredSlots.sort((a, b) => b.score - a.score);
+  return scoredSlots[0].slot;
+}
+```
+
+### 5.6 Dynamic Rescheduling
+
+**Trigger Events:**
+1. Task completed early
+2. Task priority changed
+3. Task deadline changed
+4. Task deleted/cancelled
+
+**Rescheduling Process:**
+
+```javascript
+async function handleTaskCompletedEarly(taskId, userId) {
+  const task = await getTask(taskId);
+  const actualDuration = Date.now() - task.scheduledStart;
+  const timeSaved = task.estimatedDuration - actualDuration;
+  
+  // 1. Update task duration memory
+  await updateMemory({
+    userId,
+    memoryType: 'task_duration',
+    key: task.category,
+    value: {
+      averageMinutes: calculateNewAverage(task.category, actualDuration),
+      sampleCount: incrementSampleCount(task.category)
+    }
+  });
+  
+  // 2. Mark task complete
+  await updateTask(taskId, {
+    status: 'completed',
+    actualDurationMinutes: actualDuration / (1000 * 60),
+    completedAt: new Date()
+  });
+  
+  // 3. Delete Google Calendar event
+  await deleteGoogleCalendarEvent(task.googleCalendarEventId);
+  
+  // 4. Get remaining tasks for today
+  const remainingTasks = await getTodaysTasks(userId, { status: 'scheduled' });
+  
+  if (remainingTasks.length > 0 && timeSaved > 5 * 60 * 1000) { // Only reschedule if >5min saved
+    // 5. Ask Gemini to re-optimize schedule
+    const newSchedule = await gemini.optimizeSchedule({
+      tasks: remainingTasks,
+      availableTime: timeSaved,
+      currentTime: Date.now(),
+      userMemory: await getUserMemory(userId)
+    });
+    
+    // 6. Apply new schedule
+    for (const scheduledTask of newSchedule) {
+      await updateGoogleCalendarEvent(scheduledTask.googleCalendarEventId, {
+        start: scheduledTask.newStart,
+        end: scheduledTask.newEnd
+      });
+      
+      await updateTask(scheduledTask.id, {
+        scheduledStart: scheduledTask.newStart,
+        scheduledEnd: scheduledTask.newEnd
+      });
+    }
+    
+    // 7. Log changes
+    await createScheduleChange({
+      userId,
+      triggerType: 'task_completed_early',
+      triggerTaskId: taskId,
+      changesMade: newSchedule,
+      aiReasoning: newSchedule.reasoning
+    });
+    
+    // 8. Notify user
+    await createNotification({
+      userId,
+      type: 'schedule_updated',
+      title: 'Schedule Updated',
+      message: `Your schedule has been moved forward after completing "${task.title}" early.`
+    });
+  }
+}
+```
+
+### 5.7 Manual Adjustments
+
+**Priority Change:**
+- User clicks dropdown on task card
+- Selects new priority (1-5)
+- System triggers full reschedule of remaining tasks
+- Updates Google Calendar
+- Shows notification with changes
+
+**Deadline Change:**
+- User clicks deadline field
+- Selects new date/time
+- System recalculates priority
+- Triggers reschedule if needed
+- Updates Google Calendar
+
+**Manual Time Slot Change:**
+- User drags task to different time slot in calendar view
+- System validates:
+  - Slot is available
+  - Doesn't violate energy preferences (warns if it does)
+- Updates Google Calendar
+- May trigger cascade reschedule if creates conflicts
+
+### 5.8 Notifications System
+
+**Notification Types:**
+
+1. **Task Blocked**
+   - Shown immediately after adding task
+   - "✓ [Task Name] scheduled for [Time]"
+   - Dismissible
+
+2. **Schedule Updated**
+   - Shown after automatic rescheduling
+   - "↻ Your schedule has been updated"
+   - Expandable to show what changed
+   - Includes AI reasoning
+
+3. **Conflict Detected**
+   - Shown if manual change creates issue
+   - "⚠️ This conflicts with [Other Task]"
+   - Suggests resolution
+
+4. **Working Hours Extended**
+   - Shown when day extends beyond normal hours
+   - "🕐 Your workday now ends at [Time]"
+   - Option to reject and reschedule differently
+
+**Notification UI:**
+- Subtle slide-in from top-right
+- Auto-dismiss after 5 seconds (unless error)
+- Notification center accessible from header
+- Unread indicator badge
+
+---
+
+## 6. AI Integration (Gemini)
+
+### 6.1 Gemini Prompts & Use Cases
+
+**Prompt Template Structure:**
+```
+You are a time management AI assistant. Your role is to analyze tasks and schedules to make optimal scheduling decisions.
+
+USER CONTEXT:
+- Energy Levels: {energyLevelsJSON}
+- Task History: {taskHistoryJSON}
+- Current Schedule: {currentScheduleJSON}
+- Working Hours: {workingHoursJSON}
+
+TASK:
+{specificTask}
+
+CONSTRAINTS:
+- Must respect user's energy levels
+- Must consider task priorities
+- Must optimize for productivity and well-being
+- Must provide clear reasoning for decisions
+
+OUTPUT FORMAT:
+{expectedJSONStructure}
+```
+
+**Use Case 1: Parse Natural Language Input**
+```javascript
+const prompt = `
+Parse this task input and extract structured information:
+"${userInput}"
+
+Return JSON with:
+{
+  "title": "Clean task title",
+  "description": "Additional context if any",
+  "deadline": "ISO timestamp if mentioned, null otherwise",
+  "explicitDuration": "Minutes if mentioned, null otherwise",
+  "taskType": "Category (creative/admin/meeting/etc)",
+  "suggestedCategory": "Your best guess at category"
+}
+`;
+```
+
+**Use Case 2: Estimate Task Duration**
+```javascript
+const prompt = `
+Estimate how long this task will take:
+Task: "${taskDescription}"
+Category: "${category}"
+
+User's historical data for similar tasks:
+${JSON.stringify(historicalData)}
+
+Return JSON:
+{
+  "estimatedMinutes": number,
+  "confidence": "high/medium/low",
+  "reasoning": "Brief explanation"
+}
+`;
+```
+
+**Use Case 3: Optimize Schedule**
+```javascript
+const prompt = `
+Re-optimize this schedule after completing a task early:
+
+CURRENT TASKS:
+${JSON.stringify(remainingTasks)}
+
+TIME AVAILABLE:
+${minutesSaved} minutes saved
+
+CURRENT TIME:
+${currentTime}
+
+USER ENERGY LEVELS:
+${JSON.stringify(energyLevels)}
+
+Return JSON array of tasks with new times:
+[
+  {
+    "taskId": "uuid",
+    "newStart": "ISO timestamp",
+    "newEnd": "ISO timestamp",
+    "reason": "Why this time is optimal"
+  }
+]
+
+Also provide:
+{
+  "reasoning": "Overall strategy for the new schedule",
+  "schedule": [array above]
+}
+`;
+```
+
+**Use Case 4: Assess Priority (Edge Cases)**
+```javascript
+const prompt = `
+Assess priority for this task when no deadline is specified:
+
+Task: "${taskTitle}"
+Description: "${description}"
+Category: "${category}"
+
+User's other tasks today:
+${JSON.stringify(otherTasks)}
+
+Return JSON:
+{
+  "priority": 1-5,
+  "reasoning": "Why this priority"
+}
+`;
+```
+
+### 6.2 Gemini API Integration
+
+```javascript
+// lib/gemini.js
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+export async function callGemini({ prompt, temperature = 0.7, responseFormat = 'json' }) {
+  try {
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-2.0-flash-exp",
+      generationConfig: {
+        temperature,
+        responseMimeType: responseFormat === 'json' ? 'application/json' : 'text/plain'
+      }
+    });
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    if (responseFormat === 'json') {
+      return JSON.parse(text);
+    }
+    
+    return text;
+  } catch (error) {
+    console.error('Gemini API Error:', error);
+    throw new Error('Failed to get AI response');
+  }
+}
+
+// Specific helper functions
+export async function parseTaskInput(userInput, userMemory) {
+  const prompt = `
+Parse this task input and extract structured information:
+"${userInput}"
+
+User's task history shows they commonly do these tasks:
+${JSON.stringify(Object.keys(userMemory.taskDurations || {}))}
+
+Return JSON with:
+{
+  "title": "Clean task title",
+  "description": "Additional context if any",
+  "deadline": "ISO timestamp if mentioned, null otherwise",
+  "explicitDuration": "Minutes if mentioned, null otherwise",
+  "taskType": "Category matching user history if possible",
+  "suggestedCategory": "Your best guess at category"
+}
+`;
+
+  return callGemini({ prompt, responseFormat: 'json' });
+}
+
+export async function estimateTaskDuration(taskDescription, category, historicalData) {
+  const prompt = `
+Estimate how long this task will take in minutes:
+Task: "${taskDescription}"
+Category: "${category}"
+
+${historicalData.length > 0 ? `
+User's historical data for similar "${category}" tasks:
+${JSON.stringify(historicalData.map(h => ({ duration: h.duration, completed: h.completedAt })))}
+` : 'No historical data available.'}
+
+Return JSON:
+{
+  "estimatedMinutes": number,
+  "confidence": "high/medium/low",
+  "reasoning": "Brief explanation"
+}
+`;
+
+  return callGemini({ prompt, responseFormat: 'json' });
+}
+
+export async function optimizeSchedule({ tasks, timeSaved, currentTime, userMemory }) {
+  const prompt = `
+Re-optimize this schedule after time was freed up:
+
+REMAINING TASKS:
+${JSON.stringify(tasks.map(t => ({
+  id: t.id,
+  title: t.title,
+  duration: t.estimated_duration_minutes,
+  priority: t.priority,
+  currentStart: t.scheduled_start,
+  currentEnd: t.scheduled_end,
+  energyRequirement: t.energy_requirement
+})))}
+
+TIME SAVED: ${timeSaved} minutes
+CURRENT TIME: ${currentTime}
+
+USER ENERGY LEVELS:
+${JSON.stringify(userMemory.energyLevels)}
+
+USER WORKING HOURS:
+Start: ${userMemory.workingHours.start}:00
+End: ${userMemory.workingHours.end}:00
+
+Rules:
+1. Move tasks earlier if possible to finish day sooner
+2. Respect energy level requirements
+3. Maintain priority order
+4. Keep tasks in chronological priority order
+
+Return JSON:
+{
+  "reasoning": "Overall strategy for the new schedule",
+  "schedule": [
+    {
+      "taskId": "uuid",
+      "newStart": "ISO timestamp",
+      "newEnd": "ISO timestamp",
+      "reason": "Why this time"
+    }
+  ]
+}
+`;
+
+  return callGemini({ prompt, responseFormat: 'json' });
+}
+```
+
+---
+
+## 7. Google Calendar Integration
+
+### 7.1 OAuth Setup
+
+```javascript
+// lib/google-auth.js
+import { google } from 'googleapis';
+
+const oauth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI
+);
+
+export function getAuthUrl() {
+  return oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: [
+      'https://www.googleapis.com/auth/calendar',
+      'https://www.googleapis.com/auth/userinfo.email'
+    ],
+    prompt: 'consent'
+  });
+}
+
+export async function getTokensFromCode(code) {
+  const { tokens } = await oauth2Client.getToken(code);
+  return tokens;
+}
+
+export function setCredentials(tokens) {
+  oauth2Client.setCredentials(tokens);
+  return oauth2Client;
+}
+```
+
+### 7.2 Calendar API Functions
+
+```javascript
+// lib/google-calendar.js
+import { google } from 'googleapis';
+
+export async function getCalendar(auth) {
+  return google.calendar({ version: 'v3', auth });
+}
+
+export async function listEvents(auth, timeMin, timeMax) {
+  const calendar = await getCalendar(auth);
+  
+  const response = await calendar.events.list({
+    calendarId: 'primary',
+    timeMin: timeMin.toISOString(),
+    timeMax: timeMax.toISOString(),
+    singleEvents: true,
+    orderBy: 'startTime'
+  });
+  
+  return response.data.items;
+}
+
+export async function createEvent(auth, { summary, description, start, end }) {
+  const calendar = await getCalendar(auth);
+  
+  const event = {
+    summary,
+    description,
+    start: {
+      dateTime: start.toISOString(),
+      timeZone: 'America/Los_Angeles', // Or get from user settings
+    },
+    end: {
+      dateTime: end.toISOString(),
+      timeZone: 'America/Los_Angeles',
+    },
+    colorId: '9', // Blue color for time-blocked tasks
+    reminders: {
+      useDefault: false,
+      overrides: [
+        { method: 'popup', minutes: 10 }
+      ]
+    }
+  };
+  
+  const response = await calendar.events.insert({
+    calendarId: 'primary',
+    resource: event
+  });
+  
+  return response.data.id;
+}
+
+export async function updateEvent(auth, eventId, updates) {
+  const calendar = await getCalendar(auth);
+  
+  // First get the existing event
+  const existingEvent = await calendar.events.get({
+    calendarId: 'primary',
+    eventId: eventId
+  });
+  
+  // Merge updates
+  const updatedEvent = {
+    ...existingEvent.data,
+    ...updates,
+    start: updates.start ? {
+      dateTime: updates.start.toISOString(),
+      timeZone: existingEvent.data.start.timeZone
+    } : existingEvent.data.start,
+    end: updates.end ? {
+      dateTime: updates.end.toISOString(),
+      timeZone: existingEvent.data.end.timeZone
+    } : existingEvent.data.end
+  };
+  
+  await calendar.events.update({
+    calendarId: 'primary',
+    eventId: eventId,
+    resource: updatedEvent
+  });
+}
+
+export async function deleteEvent(auth, eventId) {
+  const calendar = await getCalendar(auth);
+  
+  await calendar.events.delete({
+    calendarId: 'primary',
+    eventId: eventId
+  });
+}
+
+export async function findFreeSlots(auth, startTime, endTime, durationMinutes) {
+  const events = await listEvents(auth, startTime, endTime);
+  
+  const freeSlots = [];
+  let currentTime = new Date(startTime);
+  
+  for (const event of events) {
+    const eventStart = new Date(event.start.dateTime || event.start.date);
+    const eventEnd = new Date(event.end.dateTime || event.end.date);
+    
+    // Check if there's a gap before this event
+    const gapMinutes = (eventStart - currentTime) / (1000 * 60);
+    
+    if (gapMinutes >= durationMinutes) {
+      freeSlots.push({
+        start: new Date(currentTime),
+        end: new Date(currentTime.getTime() + durationMinutes * 60 * 1000)
+      });
+    }
+    
+    currentTime = eventEnd;
+  }
+  
+  // Check for gap after last event
+  const finalGapMinutes = (endTime - currentTime) / (1000 * 60);
+  if (finalGapMinutes >= durationMinutes) {
+    freeSlots.push({
+      start: new Date(currentTime),
+      end: new Date(currentTime.getTime() + durationMinutes * 60 * 1000)
+    });
+  }
+  
+  return freeSlots;
+}
+```
+
+---
+
+## 8. API Endpoints
+
+### 8.1 Authentication
+
+**POST /api/auth/google**
+- Initiates Google OAuth flow
+- Returns auth URL
+
+**GET /api/auth/callback**
+- Handles OAuth callback
+- Exchanges code for tokens
+- Creates/updates user in database
+- Returns session token
+
+**POST /api/auth/logout**
+- Invalidates session
+- Returns success
+
+### 8.2 Tasks
+
+**POST /api/tasks**
+```javascript
+// Request
+{
+  "input": "Edit ad for Nike campaign",
+  "deadline": "2026-02-07T17:00:00Z", // optional
+  "context": "Final revisions needed" // optional
+}
+
+// Response
+{
+  "task": {
+    "id": "uuid",
+    "title": "Edit ad for Nike campaign",
+    "estimated_duration_minutes": 90,
+    "priority": 4,
+    "scheduled_start": "2026-02-06T14:00:00Z",
+    "scheduled_end": "2026-02-06T15:30:00Z",
+    "status": "scheduled"
+  },
+  "notification": {
+    "message": "Task scheduled for 2:00 PM today"
+  }
+}
+```
+
+**GET /api/tasks**
+```javascript
+// Query params: ?date=2026-02-06&status=scheduled
+
+// Response
+{
+  "tasks": [
+    {
+      "id": "uuid",
+      "title": "Edit ad",
+      "scheduled_start": "2026-02-06T14:00:00Z",
+      "scheduled_end": "2026-02-06T15:30:00Z",
+      "priority": 4,
+      "status": "scheduled"
+    }
+  ]
+}
+```
+
+**PATCH /api/tasks/:id**
+```javascript
+// Request
+{
+  "status": "completed" // or "priority": 5, "deadline": "..."
+}
+
+// Response
+{
+  "task": { /* updated task */ },
+  "scheduleChanges": [ /* if reschedule triggered */ ]
+}
+```
+
+**DELETE /api/tasks/:id**
+- Deletes task
+- Removes from Google Calendar
+- Triggers reschedule if needed
+
+### 8.3 Memory
+
+**GET /api/memory**
+```javascript
+// Response
+{
+  "energyLevels": {
+    "09:00-11:00": "high",
+    "11:00-13:00": "medium",
+    // ...
+  },
+  "taskDurations": {
+    "edit_ad": { averageMinutes: 90, sampleCount: 15 },
+    // ...
+  },
+  "workingHours": {
+    "start": 9,
+    "end": 18,
+    "maxExtension": 3
+  },
+  "preferences": { /* ... */ }
+}
+```
+
+**PUT /api/memory**
+```javascript
+// Request
+{
+  "memoryType": "energy_levels",
+  "key": "14:00-16:00",
+  "value": { "level": "low", "suitable_for": ["admin"] }
+}
+
+// Response
+{ "success": true }
+```
+
+### 8.4 Notifications
+
+**GET /api/notifications**
+```javascript
+// Query: ?unread=true
+
+// Response
+{
+  "notifications": [
+    {
+      "id": "uuid",
+      "type": "schedule_updated",
+      "title": "Schedule Updated",
+      "message": "Your schedule has been optimized",
+      "is_read": false,
+      "created_at": "2026-02-06T14:30:00Z"
+    }
+  ]
+}
+```
+
+**PATCH /api/notifications/:id/read**
+- Marks notification as read
+
+---
+
+## 9. UI Components Specification
+
+### 9.1 Core Components
+
+**TaskInput**
+```tsx
+interface TaskInputProps {
+  onSubmit: (input: string) => Promise<void>;
+  isLoading: boolean;
+}
+
+// Features:
+// - Auto-focus on mount
+// - Enter to submit
+// - Ctrl+Enter for detailed view
+// - Loading state with spinner
+// - Clear button
+```
+
+**TaskCard**
+```tsx
+interface TaskCardProps {
+  task: Task;
+  onPriorityChange: (newPriority: number) => void;
+  onComplete: () => void;
+  onDelete: () => void;
+  onDrag: (newTime: Date) => void;
+}
+
+// Features:
+// - Checkbox to complete
+// - Priority dropdown (1-5 with colors)
+// - Three-dot menu (edit, delete)
+// - Drag handle for reordering
+// - Time badge
+// - Progress indicator if in progress
+```
+
+**CalendarView**
+```tsx
+interface CalendarViewProps {
+  tasks: Task[];
+  energyLevels: EnergyLevel[];
+  onTaskDrop: (taskId: string, newStart: Date) => void;
+  viewMode: 'day' | 'week';
+}
+
+// Features:
+// - Visual timeline (30min increments)
+// - Color-coded energy levels in background
+// - Draggable task blocks
+// - Current time indicator
+// - Zoom in/out
+// - Smooth animations for schedule changes
+```
+
+**NotificationToast**
+```tsx
+interface NotificationToastProps {
+  notification: Notification;
+  onDismiss: () => void;
+  autoClose?: number; // ms
+}
+
+// Features:
+// - Slide in from top-right
+// - Different icons per type
+// - Expandable for more details
+// - Action buttons (undo, etc)
+// - Auto-dismiss timer
+```
+
+**MemoryEditor**
+```tsx
+interface MemoryEditorProps {
+  memory: UserMemory;
+  onSave: (updates: Partial<UserMemory>) => void;
+}
+
+// Features:
+// - Energy level timeline editor
+// - Task duration list with edit
+// - Working hours adjuster
+// - Preferences checkboxes
+// - Save button with loading state
+```
+
+### 9.2 Design System
+
+**Colors:**
+```css
+:root {
+  /* Backgrounds */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F7F7F7;
+  --bg-tertiary: #EDEDED;
+  
+  /* Text */
+  --text-primary: #37352F;
+  --text-secondary: #787774;
+  --text-tertiary: #9B9A97;
+  
+  /* Priorities */
+  --priority-1: #D3D3D3; /* Low - Gray */
+  --priority-2: #93C5FD; /* Blue */
+  --priority-3: #FCD34D; /* Yellow */
+  --priority-4: #FB923C; /* Orange */
+  --priority-5: #F87171; /* Red */
+  
+  /* Energy Levels */
+  --energy-high: #86EFAC;   /* Green */
+  --energy-medium: #FDE047; /* Yellow */
+  --energy-low: #FCA5A5;    /* Red */
+  
+  /* Status */
+  --status-scheduled: #60A5FA;
+  --status-in-progress: #A78BFA;
+  --status-completed: #34D399;
+  
+  /* UI */
+  --border: #E5E5E5;
+  --shadow: rgba(0, 0, 0, 0.05);
+  --accent: #6366F1;
+}
+```
+
+**Typography:**
+```css
+/* Headings */
+h1 { font-size: 24px; font-weight: 600; line-height: 1.3; }
+h2 { font-size: 18px; font-weight: 600; line-height: 1.4; }
+h3 { font-size: 16px; font-weight: 600; line-height: 1.4; }
+
+/* Body */
+body { font-size: 14px; font-weight: 400; line-height: 1.6; }
+
+/* Small */
+.small { font-size: 12px; }
+
+/* Code */
+code { font-family: 'SF Mono', Monaco, monospace; }
+```
+
+**Spacing Scale:**
+```css
+--space-1: 4px;
+--space-2: 8px;
+--space-3: 12px;
+--space-4: 16px;
+--space-5: 24px;
+--space-6: 32px;
+--space-8: 48px;
+--space-10: 64px;
+```
+
+**Border Radius:**
+```css
+--radius-sm: 4px;
+--radius-md: 8px;
+--radius-lg: 12px;
+--radius-xl: 16px;
+```
+
+**Shadows:**
+```css
+--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
+--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+```
+
+### 9.3 Animations
+
+**Task Addition:**
+```css
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.task-card-enter {
+  animation: slideInFromBottom 0.3s ease-out;
+}
+```
+
+**Schedule Update:**
+```css
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
+}
+
+.task-card-updated {
+  animation: pulseGlow 0.6s ease-out;
+}
+```
+
+**Completion:**
+```css
+@keyframes checkmark {
+  0% { transform: scale(0) rotate(0deg); }
+  50% { transform: scale(1.2) rotate(180deg); }
+  100% { transform: scale(1) rotate(360deg); }
+}
+
+.task-completed-icon {
+  animation: checkmark 0.5s ease-out;
+}
+```
+
+---
+
+## 10. Error Handling & Edge Cases
+
+### 10.1 Error Scenarios
+
+**Google Calendar API Failures:**
+```javascript
+try {
+  await createGoogleCalendarEvent(eventData);
+} catch (error) {
+  if (error.code === 401) {
+    // Token expired, refresh
+    await refreshGoogleToken(userId);
+    await createGoogleCalendarEvent(eventData);
+  } else if (error.code === 403) {
+    // Insufficient permissions
+    await notifyUser({
+      type: 'error',
+      message: 'Please reconnect your Google Calendar with the required permissions'
+    });
+  } else {
+    // Other errors - save to DB but don't block
+    await saveTaskWithoutCalendar(taskData);
+    await notifyUser({
+      type: 'warning',
+      message: 'Task saved but couldn\'t sync to calendar. Will retry shortly.'
+    });
+  }
+}
+```
+
+**Gemini API Failures:**
+```javascript
+try {
+  const result = await callGemini(prompt);
+  return result;
+} catch (error) {
+  // Fallback to rule-based logic
+  console.error('Gemini failed, using fallback:', error);
+  
+  return fallbackLogic({
+    task: taskData,
+    userMemory,
+    calendar
+  });
+}
+
+function fallbackLogic({ task, userMemory, calendar }) {
+  // Simple heuristic-based scheduling
+  // - Use exact task duration from memory or default to 60min
+  // - Priority based purely on deadline
+  // - First available slot matching energy requirement
+}
+```
+
+**No Available Time Slots:**
+```javascript
+if (freeSlots.length === 0) {
+  // Option 1: Extend working hours
+  const extendedSlot = await extendWorkingHours(duration);
+  
+  if (extendedSlot) {
+    await notifyUser({
+      type: 'warning',
+      message: `Your workday now extends to ${formatTime(extendedSlot.end)}. Consider rescheduling lower-priority tasks.`
+    });
+    return extendedSlot;
+  }
+  
+  // Option 2: Suggest moving to next day
+  await notifyUser({
+    type: 'error',
+    message: 'No time available today. Should I schedule this for tomorrow?',
+    actions: [
+      { label: 'Schedule Tomorrow', action: 'reschedule_tomorrow' },
+      { label: 'Show Conflicts', action: 'show_conflicts' }
+    ]
+  });
+  
+  throw new Error('NO_SLOTS_AVAILABLE');
+}
+```
+
+**Conflicting Edits:**
+```javascript
+// User changes priority while AI is rescheduling
+async function handleConcurrentEdits(taskId, userEdit, aiEdit) {
+  // User wins - always respect manual overrides
+  await applyEdit(userEdit);
+  
+  // Notify AI edit was overridden
+  await notifyUser({
+    type: 'info',
+    message: 'AI rescheduling cancelled - your manual change takes priority'
+  });
+  
+  // Trigger new reschedule with updated state
+  await rescheduleRemaining();
+}
+```
+
+### 10.2 Edge Cases
+
+**Task Spans Multiple Days:**
+- Split into multiple calendar events
+- Each labeled "Day 1 of 2", "Day 2 of 2"
+- Separate task records linked by parent_task_id
+
+**User Deletes Calendar Event Directly:**
+- Daily sync job checks for orphaned tasks
+- Marks tasks as "cancelled" if calendar event missing
+- Notifies user of discrepancy
+
+**Two Tasks Added Simultaneously:**
+- Queue system for task processing
+- Process in order received
+- Second task sees updated calendar after first scheduled
+
+**User's Calendar Already Has Events:**
+- Import existing events on first sync
+- Mark as "external_event" (non-editable)
+- Schedule around them
+
+**Task Overruns Estimated Time:**
+- Show "Still working on [Task]?" notification
+- Options:
+  - "Yes, extend" → reschedule rest of day
+  - "Done" → mark complete
+  - "Pause" → mark partially complete, reschedule remainder
+
+---
+
+## 11. Performance & Optimization
+
+### 11.1 Caching Strategy
+
+**User Memory:**
+```javascript
+// Cache in Redis with 1-hour TTL
+const cacheKey = `user_memory:${userId}`;
+let memory = await redis.get(cacheKey);
+
+if (!memory) {
+  memory = await fetchFromDatabase(userId);
+  await redis.setex(cacheKey, 3600, JSON.stringify(memory));
+}
+```
+
+**Google Calendar Events:**
+```javascript
+// Cache today's events for 5 minutes
+const cacheKey = `calendar:${userId}:${todayDate}`;
+let events = await redis.get(cacheKey);
+
+if (!events) {
+  events = await listGoogleCalendarEvents(userId);
+  await redis.setex(cacheKey, 300, JSON.stringify(events));
+}
+
+// Invalidate on any calendar change
+await redis.del(`calendar:${userId}:${todayDate}`);
+```
+
+**Gemini Responses:**
+```javascript
+// Cache common task estimations
+const cacheKey = `gemini:estimate:${taskType}`;
+let estimate = await redis.get(cacheKey);
+
+if (!estimate) {
+  estimate = await callGemini(prompt);
+  await redis.setex(cacheKey, 86400, JSON.stringify(estimate)); // 24 hours
+}
+```
+
+### 11.2 Database Optimization
+
+**Indexes:**
+```sql
+-- Fast task lookups
+CREATE INDEX idx_tasks_user_date ON tasks(user_id, scheduled_start::date);
+CREATE INDEX idx_tasks_status_priority ON tasks(status, priority DESC);
+
+-- Fast memory lookups
+CREATE INDEX idx_memory_user_type ON user_memory(user_id, memory_type);
+
+-- Fast notification queries
+CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read) WHERE is_read = false;
+```
+
+**Query Optimization:**
+```javascript
+// Bad: N+1 queries
+for (const task of tasks) {
+  const memory = await getMemory(task.category);
+}
+
+// Good: Single query with JOIN
+const tasksWithMemory = await db.query(`
+  SELECT t.*, m.value as category_memory
+  FROM tasks t
+  LEFT JOIN user_memory m ON m.user_id = t.user_id 
+    AND m.memory_type = 'task_duration'
+    AND m.key = t.task_category
+  WHERE t.user_id = $1 AND t.status = 'scheduled'
+`, [userId]);
+```
+
+### 11.3 Real-time Updates
+
+**Supabase Realtime:**
+```javascript
+// Client-side subscription
+const tasksSubscription = supabase
+  .channel('tasks')
+  .on('postgres_changes', {
+    event: '*',
+    schema: 'public',
+    table: 'tasks',
+    filter: `user_id=eq.${userId}`
+  }, (payload) => {
+    // Update UI immediately
+    updateTasksInUI(payload.new);
+  })
+  .subscribe();
+```
+
+---
+
+## 12. Security & Privacy
+
+### 12.1 Data Encryption
+
+**Sensitive Fields:**
+```sql
+-- Encrypt Google tokens at rest
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- Store tokens encrypted
+INSERT INTO users (google_refresh_token) 
+VALUES (pgp_sym_encrypt('token_value', 'encryption_key'));
+
+-- Retrieve decrypted
+SELECT pgp_sym_decrypt(google_refresh_token::bytea, 'encryption_key') 
+FROM users WHERE id = $1;
+```
+
+**Environment Variables:**
+```env
+# Never commit these
+GOOGLE_CLIENT_SECRET=...
+GEMINI_API_KEY=...
+SUPABASE_SERVICE_KEY=...
+DATABASE_ENCRYPTION_KEY=...
+```
+
+### 12.2 API Security
+
+**Rate Limiting:**
+```javascript
+// Implement per-user rate limits
+const rateLimit = new Map();
+
+async function checkRateLimit(userId) {
+  const key = `rate_limit:${userId}`;
+  const count = rateLimit.get(key) || 0;
+  
+  if (count > 100) { // 100 requests per hour
+    throw new Error('RATE_LIMIT_EXCEEDED');
+  }
+  
+  rateLimit.set(key, count + 1);
+  setTimeout(() => rateLimit.delete(key), 3600000); // Reset after 1 hour
+}
+```
+
+**Input Validation:**
+```javascript
+import { z } from 'zod';
+
+const taskInputSchema = z.object({
+  input: z.string().min(1).max(500),
+  deadline: z.string().datetime().optional(),
+  context: z.string().max(1000).optional()
+});
+
+// Validate before processing
+const validated = taskInputSchema.parse(request.body);
+```
+
+### 12.3 Access Control
+
+**Row Level Security (RLS):**
+```sql
+-- Enable RLS
+ALTER TABLE tasks ENABLE ROW LEVEL SECURITY;
+
+-- Users can only see their own tasks
+CREATE POLICY "Users can only access their own tasks"
+  ON tasks FOR ALL
+  USING (auth.uid() = user_id);
+
+-- Same for other tables
+CREATE POLICY "Users can only access their own memory"
+  ON user_memory FOR ALL
+  USING (auth.uid() = user_id);
+```
+
+---
+
+## 13. Testing Strategy
+
+### 13.1 Unit Tests
+
+**Priority Calculation:**
+```javascript
+describe('calculatePriority', () => {
+  test('assigns priority 5 for deadline in 2 hours', () => {
+    const deadline = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const priority = calculatePriority({ deadline });
+    expect(priority).toBe(5);
+  });
+  
+  test('assigns priority 1 for deadline next week', () => {
+    const deadline = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+    const priority = calculatePriority({ deadline });
+    expect(priority).toBe(1);
+  });
+});
+```
+
+**Time Slot Finding:**
+```javascript
+describe('findOptimalSlot', () => {
+  test('respects energy level requirements', () => {
+    const slot = findOptimalSlot({
+      duration: 90,
+      energyRequirement: 'high',
+      energyMap: { '09:00-11:00': 'high', '14:00-16:00': 'low' }
+    });
+    
+    expect(slot.start.getHours()).toBeLessThan(11);
+  });
+});
+```
+
+### 13.2 Integration Tests
+
+**Task Addition Flow:**
+```javascript
+test('adding task creates calendar event and database record', async () => {
+  const task = await addTask({
+    input: 'Edit ad',
+    userId: testUserId
+  });
+  
+  // Check database
+  const dbTask = await getTask(task.id);
+  expect(dbTask.title).toBe('Edit ad');
+  
+  // Check Google Calendar
+  const calendarEvent = await getGoogleCalendarEvent(dbTask.googleCalendarEventId);
+  expect(calendarEvent.summary).toBe('Edit ad');
+});
+```
+
+### 13.3 E2E Tests
+
+**Complete User Journey:**
+```javascript
+test('user can add task, complete early, and see rescheduled items', async () => {
+  // 1. Login
+  await page.goto('/login');
+  await page.click('text=Sign in with Google');
+  
+  // 2. Add task
+  await page.fill('[data-testid="task-input"]', 'Edit ad');
+  await page.press('[data-testid="task-input"]', 'Enter');
+  
+  // 3. Verify task appears
+  await expect(page.locator('text=Edit ad')).toBeVisible();
+  
+  // 4. Mark complete
+  await page.click('[data-testid="task-checkbox"]');
+  
+  // 5. Verify notification
+  await expect(page.locator('text=Schedule Updated')).toBeVisible();
+});
+```
+
+---
+
+## 14. Deployment & DevOps
+
+### 14.1 Environment Setup
+
+**Development:**
+```bash
+# .env.local
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+SUPABASE_SERVICE_ROLE_KEY=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GEMINI_API_KEY=...
+```
+
+**Production (Vercel):**
+- Environment variables set in Vercel dashboard
+- Use Vercel Environment Variables for secrets
+- Separate staging and production environments
+
+### 14.2 CI/CD Pipeline
+
+**GitHub Actions:**
+```yaml
+name: CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+      - run: npm install
+      - run: npm run test
+      - run: npm run lint
+      
+  deploy-staging:
+    needs: test
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          
+  deploy-production:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+```
+
+### 14.3 Monitoring
+
+**Error Tracking:**
+- Sentry for frontend and backend errors
+- Custom alerts for critical failures (auth, calendar sync)
+
+**Performance Monitoring:**
+- Vercel Analytics for frontend performance
+- Custom logging for API response times
+- Supabase dashboard for database performance
+
+**User Analytics:**
+- PostHog or Mixpanel for user behavior
+- Track: tasks added, completions, rescheduling frequency
+- A/B test different AI prompting strategies
+
+---
+
+## 15. Future Enhancements (Post-MVP)
+
+### 15.1 Phase 2 Features
+
+1. **Recurring Tasks**
+   - "Every Monday at 9 AM"
+   - Smart rescheduling if conflicts arise
+
+2. **Team Collaboration**
+   - Shared calendars
+   - Task delegation
+   - Team workload balancing
+
+3. **Mobile App**
+   - React Native version
+   - Push notifications
+   - Quick task capture
+
+4. **Integrations**
+   - Slack (add tasks from messages)
+   - Todoist/Asana import
+   - Email (create tasks from emails)
+
+5. **Advanced AI Features**
+   - Learn from completion patterns
+   - Suggest task batching
+   - Predict task durations better over time
+   - Proactive suggestions ("You usually do X on Mondays")
+
+6. **Reporting & Insights**
+   - Productivity analytics
+   - Time distribution charts
+   - Completion rate trends
+   - Energy level optimization suggestions
+
+### 15.2 Scalability Considerations
+
+**For 10,000+ Users:**
+- Move to dedicated PostgreSQL instance
+- Implement Redis cluster for caching
+- Use Vercel Edge Functions for faster API responses
+- Consider serverless background jobs (AWS Lambda, etc.)
+- Implement database sharding by user_id
+
+---
+
+## 16. Success Metrics
+
+### 16.1 Key Performance Indicators (KPIs)
+
+**User Engagement:**
+- Daily active users (DAU)
+- Tasks added per user per day
+- Task completion rate
+- Average session duration
+
+**System Performance:**
+- API response time < 200ms (p95)
+- Google Calendar sync success rate > 99%
+- Gemini API call success rate > 95%
+- Task scheduling accuracy (user satisfaction)
+
+**User Satisfaction:**
+- Net Promoter Score (NPS)
+- Feature adoption rate (% using auto-scheduling vs manual)
+- User retention (7-day, 30-day)
+- Support ticket volume
+
+---
+
+## 17. Documentation Requirements
+
+### 17.1 User Documentation
+
+1. **Quick Start Guide**
+   - How to connect Google Calendar
+   - Adding your first task
+   - Understanding priorities
+   - Customizing energy levels
+
+2. **Feature Guides**
+   - Memory document explained
+   - How AI makes scheduling decisions
+   - Manual overrides and adjustments
+   - Notifications and what they mean
+
+3. **FAQ**
+   - Privacy and data handling
+   - Google Calendar permissions
+   - Troubleshooting common issues
+
+### 17.2 Developer Documentation
+
+1. **Setup Guide**
+   - Local development environment
+   - Environment variables
+   - Database migrations
+   - API testing
+
+2. **Architecture Documentation**
+   - System diagrams
+   - Data flow diagrams
+   - Database schema
+   - API reference
+
+3. **Contributing Guidelines**
+   - Code style
+   - Pull request process
+   - Testing requirements
+
+---
+
+## 18. Project Timeline & Milestones
+
+**Week 1-2: Foundation**
+- Set up Next.js + Supabase + Vercel
+- Implement Google OAuth
+- Create database schema
+- Basic UI components
+
+**Week 3-4: Core Functionality**
+- Task input and parsing (Gemini integration)
+- Priority calculation
+- Time slot finding algorithm
+- Google Calendar integration
+
+**Week 5-6: Scheduling Intelligence**
+- Energy level consideration
+- Dynamic rescheduling
+- Memory document system
+- Notification system
+
+**Week 7-8: Polish & Testing**
+- UI/UX refinements
+- Comprehensive testing
+- Performance optimization
+- Bug fixes
+
+**Week 9: Beta Launch**
+- Deploy to production
+- Onboard beta users
+- Gather feedback
+- Iterate
+
+---
+
+## 19. Conclusion
+
+This PRD outlines a fully-functional, production-ready AI time-blocking assistant. The system autonomously manages your calendar while respecting your work patterns, energy levels, and priorities. With a clean, Notion/Apple-inspired UI and intelligent Gemini-powered scheduling, it eliminates the friction of manual time management.
+
+**Key Differentiators:**
+- True autonomy with smart overrides
+- Energy-optimized scheduling
+- Dynamic rescheduling based on reality
+- Learning from your patterns
+- Clean, distraction-free interface
+
+**Technical Excellence:**
+- Modern stack (Next.js, Supabase, Gemini)
+- Real-time updates
+- Robust error handling
+- Secure and scalable
+- Well-tested codebase
+
+This is not an MVP—this is a production-grade product ready to ship.

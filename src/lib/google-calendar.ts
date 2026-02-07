@@ -134,29 +134,36 @@ export async function findFreeSlots(
     auth: OAuth2Client,
     startTime: Date,
     endTime: Date,
-    durationMinutes: number
+    durationMinutes: number,
+    options?: { ignoreEventIds?: string[]; busySlots?: FreeSlot[] }
 ): Promise<FreeSlot[]> {
     const events = await listEvents(auth, startTime, endTime);
+    const ignoreIds = new Set(options?.ignoreEventIds || []);
+
+    const intervals: Array<{ start: Date; end: Date }> = [];
+
+    for (const event of events) {
+        if (event.id && ignoreIds.has(event.id)) continue;
+        if (!event.start?.dateTime || !event.end?.dateTime) continue;
+        intervals.push({
+            start: new Date(event.start.dateTime),
+            end: new Date(event.end.dateTime),
+        });
+    }
+
+    for (const slot of options?.busySlots || []) {
+        intervals.push({ start: new Date(slot.start), end: new Date(slot.end) });
+    }
+
+    const sortedIntervals = intervals.sort((a, b) => a.start.getTime() - b.start.getTime());
 
     const freeSlots: FreeSlot[] = [];
     let currentTime = new Date(startTime);
 
-    // Sort events by start time
-    const sortedEvents = events
-        .filter((e) => e.start?.dateTime)
-        .sort((a, b) => {
-            const aStart = new Date(a.start!.dateTime!);
-            const bStart = new Date(b.start!.dateTime!);
-            return aStart.getTime() - bStart.getTime();
-        });
+    for (const interval of sortedIntervals) {
+        if (interval.end <= currentTime) continue;
 
-    for (const event of sortedEvents) {
-        const eventStart = new Date(event.start!.dateTime!);
-        const eventEnd = new Date(event.end!.dateTime!);
-
-        // Check if there's a gap before this event
-        const gapMinutes = (eventStart.getTime() - currentTime.getTime()) / (1000 * 60);
-
+        const gapMinutes = (interval.start.getTime() - currentTime.getTime()) / (1000 * 60);
         if (gapMinutes >= durationMinutes) {
             freeSlots.push({
                 start: new Date(currentTime),
@@ -164,13 +171,11 @@ export async function findFreeSlots(
             });
         }
 
-        // Move current time to after this event
-        if (eventEnd > currentTime) {
-            currentTime = eventEnd;
+        if (interval.end > currentTime) {
+            currentTime = interval.end;
         }
     }
 
-    // Check for gap after last event
     const finalGapMinutes = (endTime.getTime() - currentTime.getTime()) / (1000 * 60);
     if (finalGapMinutes >= durationMinutes) {
         freeSlots.push({

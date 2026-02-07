@@ -206,11 +206,12 @@ export async function POST(request: NextRequest) {
         }
 
         // 9. Create notification
+        const notificationType = scheduledStart ? "task_blocked" : "conflict_detected";
         const { data: notification } = await supabase
             .from("notifications")
             .insert({
                 user_id: user.id,
-                type: "task_blocked",
+                type: notificationType,
                 title: "Task Scheduled",
                 message: scheduledStart
                     ? `"${parsed.title}" scheduled for ${scheduledStart.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
@@ -219,6 +220,22 @@ export async function POST(request: NextRequest) {
             })
             .select()
             .single();
+
+        // 10. Log schedule change
+        await supabase.from("schedule_changes").insert({
+            user_id: user.id,
+            trigger_type: "task_added",
+            trigger_task_id: task.id,
+            changes_made: [
+                {
+                    taskId: task.id,
+                    newStart: scheduledStart?.toISOString(),
+                    newEnd: scheduledEnd?.toISOString(),
+                    action: "created",
+                },
+            ],
+            ai_reasoning: scheduledStart ? "Initial scheduling for new task" : "No available slot found today",
+        });
 
         const response: CreateTaskResponse = {
             task: task as Task,
