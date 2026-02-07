@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getOrCreateUserByEmail } from "@/lib/supabase/user";
 import { cookies } from "next/headers";
 
+export const runtime = "nodejs";
+
 // POST /api/user/onboarding - Mark onboarding as complete
 export async function POST() {
     const supabase = createAdminClient();

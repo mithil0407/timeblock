@@ -1,0 +1,73 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.notifications (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  type text NOT NULL CHECK (type = ANY (ARRAY['schedule_updated'::text, 'task_blocked'::text, 'conflict_detected'::text, 'working_hours_extended'::text])),
+  title text NOT NULL,
+  message text NOT NULL,
+  related_task_id uuid,
+  is_read boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT notifications_related_task_id_fkey FOREIGN KEY (related_task_id) REFERENCES public.tasks(id)
+);
+CREATE TABLE public.schedule_changes (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  trigger_type text NOT NULL CHECK (trigger_type = ANY (ARRAY['task_added'::text, 'task_completed_early'::text, 'priority_changed'::text, 'deadline_changed'::text, 'task_deleted'::text])),
+  trigger_task_id uuid,
+  changes_made jsonb NOT NULL,
+  ai_reasoning text,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT schedule_changes_pkey PRIMARY KEY (id),
+  CONSTRAINT schedule_changes_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id),
+  CONSTRAINT schedule_changes_trigger_task_id_fkey FOREIGN KEY (trigger_task_id) REFERENCES public.tasks(id)
+);
+CREATE TABLE public.tasks (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  title text NOT NULL,
+  description text,
+  estimated_duration_minutes integer NOT NULL,
+  actual_duration_minutes integer,
+  priority integer NOT NULL DEFAULT 3 CHECK (priority >= 1 AND priority <= 5),
+  deadline timestamp with time zone,
+  scheduled_start timestamp with time zone,
+  scheduled_end timestamp with time zone,
+  status text NOT NULL DEFAULT 'scheduled'::text CHECK (status = ANY (ARRAY['scheduled'::text, 'in_progress'::text, 'completed'::text, 'cancelled'::text])),
+  google_calendar_event_id text,
+  task_category text,
+  energy_requirement text CHECK (energy_requirement = ANY (ARRAY['high'::text, 'medium'::text, 'low'::text])),
+  context text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  CONSTRAINT tasks_pkey PRIMARY KEY (id),
+  CONSTRAINT tasks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.user_memory (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid,
+  memory_type text NOT NULL,
+  key text NOT NULL,
+  value jsonb NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_memory_pkey PRIMARY KEY (id),
+  CONSTRAINT user_memory_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id)
+);
+CREATE TABLE public.users (
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  email text NOT NULL UNIQUE,
+  google_calendar_id text,
+  google_refresh_token text,
+  google_access_token text,
+  google_token_expiry timestamp with time zone,
+  has_completed_onboarding boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT users_pkey PRIMARY KEY (id)
+);

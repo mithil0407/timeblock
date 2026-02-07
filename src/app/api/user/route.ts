@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getOrCreateUserByEmail } from "@/lib/supabase/user";
 import { cookies } from "next/headers";
 
+export const runtime = "nodejs";
+
 // GET /api/user - Get current user
 export async function GET() {
     const cookieStore = await cookies();

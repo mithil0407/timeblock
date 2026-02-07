@@ -1,0 +1,902 @@
+[
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: user=\"supabase_admin\" method=trust (/etc/postgresql/pg_hba.conf:85)",
+    "hint": null,
+    "id": "609ee7d5-6d03-470e-8dbf-921dc33f2e41",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473405130000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=supabase_admin database=postgres application_name=postgres_exporter",
+    "hint": null,
+    "id": "dfe18175-9fb6-488e-aeaa-6dc1a0c912be",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473405130000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=::1 port=13579",
+    "hint": null,
+    "id": "3403a18b-7882-4e45-b8c5-360a19155b03",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473405129000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=supabase_admin database=postgres application_name=postgres_exporter",
+    "hint": null,
+    "id": "f583a2e8-fb81-4689-90eb-46367c0b7799",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473345130000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: user=\"supabase_admin\" method=trust (/etc/postgresql/pg_hba.conf:85)",
+    "hint": null,
+    "id": "394e37f7-2550-4157-aeb8-ea13a94c6964",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473345130000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=::1 port=23899",
+    "hint": null,
+    "id": "2e97e55c-a335-4fc9-8fd7-09ea52fab244",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473345129000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "eb1d760b-f5f8-4bbc-92bf-2dc092c14e8b",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473316651000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "2bb7f5d0-17a2-49ae-a690-ee36e85b43f2",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473316651000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=2406:da18:96a:8200:a39c:289a:43fc:c405 port=36556",
+    "hint": null,
+    "id": "f77ca25e-3350-4de6-90d2-faf90e631c31",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473316635000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: user=\"supabase_admin\" method=trust (/etc/postgresql/pg_hba.conf:85)",
+    "hint": null,
+    "id": "daddbc83-d843-497a-8c28-7627377fffa1",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473285131000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=supabase_admin database=postgres application_name=postgres_exporter",
+    "hint": null,
+    "id": "93a6596a-31a0-46b1-9c4f-af3328b95e7f",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473285131000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=::1 port=49241",
+    "hint": null,
+    "id": "5c162f3f-b3d7-4a8f-935e-2d3f26d28a85",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473285130000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: user=\"supabase_storage_admin\" method=trust (/etc/postgresql/pg_hba.conf:85)",
+    "hint": null,
+    "id": "f0c021ae-7d95-40a0-b314-261cdff7e4cc",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284485000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=supabase_storage_admin database=postgres",
+    "hint": null,
+    "id": "59de4b5d-cad5-4de3-8f65-ff0f9a1d94bd",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284485000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=pgbouncer database=postgres",
+    "hint": null,
+    "id": "d33dc081-7ab1-4cd6-a3fa-0e290893e511",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284473000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: user=\"pgbouncer\" method=trust (/etc/postgresql/pg_hba.conf:84)",
+    "hint": null,
+    "id": "bf5793e8-5a5e-4f58-853b-27e15fcca84b",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284473000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"supabase_admin\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "4d88f7ed-c00f-4a38-95d1-fd7fc2644276",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284407000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "1cebdba5-f989-42f3-81c8-c84460d6e9fb",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284407000
+  },
+  {
+    "detail": null,
+    "error_severity": "ERROR",
+    "event_message": "relation \"supabase_migrations.schema_migrations\" does not exist",
+    "hint": null,
+    "id": "1f9aa5b0-ccfb-430b-b96f-2a4c29b80ca6",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284341000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "b24f194f-5f5e-4a02-9135-f8b12f40d3eb",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284338000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "9722aea9-abba-4602-8695-ff547d1db99a",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284338000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "86050d8e-9efb-4c6f-974c-f6460908d32d",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284332000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"supabase_admin\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "39caf6c2-690c-4a5a-9076-ba182565d1fd",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284332000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=2406:da18:96a:8201:e78:c9a1:a09c:af59 port=56952",
+    "hint": null,
+    "id": "0625c930-2964-49b0-b231-78162e57f8a0",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284318000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=2406:da18:96a:8200:7400:ca3f:6c54:42bb port=38992",
+    "hint": null,
+    "id": "c2f9fa59-f87d-4123-a89b-b956b15ab69d",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473284306000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "statement: SET statement_timeout='58s'; SET idle_session_timeout='58s';CREATE OR REPLACE FUNCTION pg_temp.count_estimate(\n    query text\n) RETURNS integer LANGUAGE plpgsql AS $$\nDECLARE\n    plan jsonb;\nBEGIN\n    EXECUTE 'EXPLAIN (FORMAT JSON)' || query INTO plan;\n    RETURN plan->0->'Plan'->'Plan Rows';\nEND;\n$$;\n\nwith approximation as (\n    select reltuples as estimate\n    from pg_class\n    where oid = 46733\n)\nselect \n  case \n    when estimate = -1 then (select pg_temp.count_estimate('select * from public.notifications;'))\n    when estimate > 50000 then estimate\n    else (select count(*) from public.notifications)\n  end as count,\n  estimate = -1 or estimate > 50000 as is_estimate\nfrom approximation;\n\n-- source: dashboard\n-- user: 531f3106-b5ae-421b-93d6-9d29897c5eaa\n-- date: 2026-02-07T14:08:02.198Z",
+    "hint": null,
+    "id": "bb5f2709-abac-4706-93d9-82598af825a4",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473282182000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "5b8b3feb-24e7-44b3-8ddd-617a1598a771",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473282179000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "7fd695e5-bd9e-4217-a468-3bfac1be63f5",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473282179000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "a2d48568-c94c-4dca-9279-203ca313bd71",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473282174000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "847bedae-9b01-4b1c-b362-d25d773c068e",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473282174000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "67ee50b0-3102-49a1-b278-2fbd45565f3a",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473282144000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "473e8eaf-43b6-4366-8048-de1bb67344df",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473282144000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=2406:da18:96a:8201:e3e9:858c:a17d:1100 port=39566",
+    "hint": null,
+    "id": "6772366f-a375-48c5-89de-3eeb0d13239a",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473282130000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "06633886-7ef1-480d-9978-0b82286af2c3",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279794000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "4242aeaa-34c9-4d5b-baf7-9825b2876ec6",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279794000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "statement: SET statement_timeout='58s'; SET idle_session_timeout='58s';CREATE OR REPLACE FUNCTION pg_temp.count_estimate(\n    query text\n) RETURNS integer LANGUAGE plpgsql AS $$\nDECLARE\n    plan jsonb;\nBEGIN\n    EXECUTE 'EXPLAIN (FORMAT JSON)' || query INTO plan;\n    RETURN plan->0->'Plan'->'Plan Rows';\nEND;\n$$;\n\nwith approximation as (\n    select reltuples as estimate\n    from pg_class\n    where oid = 46663\n)\nselect \n  case \n    when estimate = -1 then (select pg_temp.count_estimate('select * from public.users;'))\n    when estimate > 50000 then estimate\n    else (select count(*) from public.users)\n  end as count,\n  estimate = -1 or estimate > 50000 as is_estimate\nfrom approximation;\n\n-- source: dashboard\n-- user: 531f3106-b5ae-421b-93d6-9d29897c5eaa\n-- date: 2026-02-07T14:07:59.682Z",
+    "hint": null,
+    "id": "efaff7c5-834b-4e66-8b30-bf9f85adf473",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279669000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "bc846d03-f0a1-4e9f-a428-594bd42001d8",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279666000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "842118eb-3cbb-43c8-98cd-aa5b12beccf4",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279666000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "b055b542-c7c7-4e58-bc71-c5bc0a3e8b6e",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279657000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "b184ee4e-073b-41a9-81a2-2c9bd26f423a",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279656000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "da6184d9-2ec8-4333-8f8f-99abdfbda047",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279654000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "19c458c8-e6ca-4784-8c5c-4bd0cbc9703f",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279654000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "26c09d0c-4b61-450b-85b6-f35464a95fd8",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279545000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "fd90552d-d5fd-47b4-9e6f-85aa1d23d3ce",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279545000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "31f3ba6b-3796-4169-94ac-3e4c508ed919",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279333000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "2cc8a1cb-f752-4aa2-9fe8-d8f073c11ff3",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473279333000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "statement: SET statement_timeout='58s'; SET idle_session_timeout='58s';CREATE OR REPLACE FUNCTION pg_temp.count_estimate(\n    query text\n) RETURNS integer LANGUAGE plpgsql AS $$\nDECLARE\n    plan jsonb;\nBEGIN\n    EXECUTE 'EXPLAIN (FORMAT JSON)' || query INTO plan;\n    RETURN plan->0->'Plan'->'Plan Rows';\nEND;\n$$;\n\nwith approximation as (\n    select reltuples as estimate\n    from pg_class\n    where oid = 46693\n)\nselect \n  case \n    when estimate = -1 then (select pg_temp.count_estimate('select * from public.tasks;'))\n    when estimate > 50000 then estimate\n    else (select count(*) from public.tasks)\n  end as count,\n  estimate = -1 or estimate > 50000 as is_estimate\nfrom approximation;\n\n-- source: dashboard\n-- user: 531f3106-b5ae-421b-93d6-9d29897c5eaa\n-- date: 2026-02-07T14:07:58.704Z",
+    "hint": null,
+    "id": "c9984ba5-8274-40d4-a760-a2fa981c4437",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473278701000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "a1bc6605-e17a-4845-b8d1-c87562763cde",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473278698000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "8e4d7502-0e32-48bd-b4a9-17e0935e1fa1",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473278698000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "c27190b6-baa7-48b3-82a6-a29649681360",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473278698000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "482a2e5b-3ddf-4096-a9c2-44fb110295de",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473278698000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "3d752529-7397-40df-b5f8-ca53df45999e",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473278682000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "101585bf-79bf-497d-bb51-b0e9c5fd41a9",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473278682000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=2406:da18:96a:8201:f99:1ddb:4682:c8aa port=46490",
+    "hint": null,
+    "id": "bc470756-3912-44a6-85a6-ceb374d86b9e",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473278681000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=2406:da18:96a:8200:b7d5:2d01:d184:6515 port=44260",
+    "hint": null,
+    "id": "b9213588-cc96-4df7-b7db-381adbf060fe",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473278669000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=2406:da18:96a:8200:7400:ca3f:6c54:42bb port=50492",
+    "hint": null,
+    "id": "13eeaedf-fc47-4b19-a555-d5425c79f6b4",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473278664000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "866e0be2-06df-4c4c-9983-47ac62cee47b",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473277063000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "22530f3a-2cae-43b1-81a4-27345065dc35",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473277062000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "2268ccfe-7189-4c92-9e55-9de5a9c9b461",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473277044000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "a768e42a-82c6-4143-b59a-934227528917",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473277044000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "4e04703a-7ddd-4e86-89e4-f96a62b15940",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473277003000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "83cf4bd0-0432-45e7-8a77-cf5519815a93",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473277003000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "statement: SET statement_timeout='58s'; SET idle_session_timeout='58s';CREATE OR REPLACE FUNCTION pg_temp.count_estimate(\n    query text\n) RETURNS integer LANGUAGE plpgsql AS $$\nDECLARE\n    plan jsonb;\nBEGIN\n    EXECUTE 'EXPLAIN (FORMAT JSON)' || query INTO plan;\n    RETURN plan->0->'Plan'->'Plan Rows';\nEND;\n$$;\n\nwith approximation as (\n    select reltuples as estimate\n    from pg_class\n    where oid = 46676\n)\nselect \n  case \n    when estimate = -1 then (select pg_temp.count_estimate('select * from public.user_memory;'))\n    when estimate > 50000 then estimate\n    else (select count(*) from public.user_memory)\n  end as count,\n  estimate = -1 or estimate > 50000 as is_estimate\nfrom approximation;\n\n-- source: dashboard\n-- user: 531f3106-b5ae-421b-93d6-9d29897c5eaa\n-- date: 2026-02-07T14:07:57.018Z",
+    "hint": null,
+    "id": "787063e5-ac32-4955-afaf-dd16239b3d2d",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473277003000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "289a0277-52d2-432a-b62a-c3ad5c666de1",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473277001000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "38e4eb0e-b041-4a33-b5eb-613b3d4ef5f8",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473277001000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "846494d4-dbff-4b6d-8631-f2df3e064ca9",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276988000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "9647b199-062a-4fcf-9a47-3e68022ced15",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276988000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "76ab6a1e-82eb-4fb8-81c3-f40621d8b8f9",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276818000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "cb5f4927-0645-4737-81ed-1674a0a15506",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276818000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "b5879644-3f68-4fe6-93b9-41d3b0473396",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276610000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "3a1677b6-3737-426c-9995-615d9f10f4b2",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276610000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "59c42d3e-bbea-4fbe-a1f0-4e8cb00ba8c2",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276452000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "44bbe971-8b3f-4076-a1b8-f670db3f00b2",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276452000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "3ef5804c-d1d4-4929-a1e1-c972accc7686",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276339000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "4a89044b-1e28-42f4-9b67-4d3afe229ef8",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276339000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "f8349075-d7c6-42e8-8b1f-23d3658277c8",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276297000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "3655157d-3887-4639-a746-fa006b018694",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276297000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "c15e149f-3008-4d61-b252-7fa1f9661336",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276170000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "60c0a6de-a0cd-4a6f-832e-bdaa5ccef4ac",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276170000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "bbf967ce-f79b-4915-90ed-aed4efe6d3f7",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276094000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "e8192563-57de-4368-ab87-b24fef8f4378",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276094000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "1f9d11b7-9c4d-4885-98d7-2e581ccacbc3",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276031000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "45d97a17-8869-41c5-90bf-e375a807b6c4",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473276031000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "019b7b17-46ae-4610-8d44-07ffa07fcd9d",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473275837000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "29a7e38d-5aac-4fd3-ae25-500d480336fc",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473275837000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "37e19385-68b4-49f3-9c3a-01b1af11d86f",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473275834000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "c5280e45-dfef-49ee-87eb-9a109e988ffa",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473275834000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "a3d025ab-49c8-4b6e-8d14-cc6cf96b7bf4",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473275577000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "18a094f3-798c-452c-bc9f-b85d93120a71",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473275577000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection received: host=2406:da18:96a:8201:3ed4:e29b:d31d:16e port=36700",
+    "hint": null,
+    "id": "f55888d8-eb63-48c7-b245-d9d2985eaf8a",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473275565000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "e0ba9bfb-f0dd-451d-9445-684a2a34185e",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473275096000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "20a1aaca-dcee-4aba-8287-e6b0ac936bf0",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473275096000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "28502408-c603-4a79-93a1-b37cbf27ba7a",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473274145000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "4568fc46-1cd2-48ba-94d7-17f867b597f1",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473274145000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "5790da6a-26dd-4399-91fd-47a4d77a8a6b",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473273734000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "7552e4f9-cd63-4af0-97e1-b09cbb6934eb",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473273734000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "baf8d668-b902-4ff7-8267-2a9b2d7dcac7",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473273718000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "4bac73c7-7cb8-4f1a-8978-52d6f70934a4",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473273718000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",
+    "hint": null,
+    "id": "b99e1955-c4b1-4912-a769-26ea716a798a",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473273700000
+  },
+  {
+    "detail": null,
+    "error_severity": "LOG",
+    "event_message": "connection authenticated: identity=\"postgres\" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",
+    "hint": null,
+    "id": "0d168c04-b1ca-4af2-995d-cccfa1ef4f6e",
+    "identifier": "drifdfrrnfqvkjwgiigp",
+    "timestamp": 1770473273700000
+  }
+]
