@@ -15,14 +15,47 @@ export function CalendarView({
     workingHours = { start: 9, end: 18 },
     energyLevels = {},
 }: CalendarViewProps) {
+    const scheduledTasks = useMemo(
+        () => tasks.filter((t) => t.scheduled_start && t.status !== "completed"),
+        [tasks]
+    );
+    const unscheduledTasks = useMemo(
+        () => tasks.filter((t) => !t.scheduled_start && t.status !== "completed"),
+        [tasks]
+    );
+
+    const displayRange = useMemo(() => {
+        if (scheduledTasks.length === 0) {
+            return { start: workingHours.start, end: workingHours.end };
+        }
+
+        let minHour = workingHours.start;
+        let maxHour = workingHours.end;
+
+        for (const task of scheduledTasks) {
+            if (!task.scheduled_start || !task.scheduled_end) continue;
+            const start = new Date(task.scheduled_start);
+            const end = new Date(task.scheduled_end);
+            const startHour = start.getHours() + start.getMinutes() / 60;
+            const endHour = end.getHours() + end.getMinutes() / 60;
+            minHour = Math.min(minHour, Math.floor(startHour));
+            maxHour = Math.max(maxHour, Math.ceil(endHour));
+        }
+
+        return {
+            start: Math.max(0, minHour),
+            end: Math.min(24, Math.max(minHour + 1, maxHour)),
+        };
+    }, [scheduledTasks, workingHours.end, workingHours.start]);
+
     // Generate time slots
     const timeSlots = useMemo(() => {
         const slots = [];
-        for (let hour = workingHours.start; hour <= workingHours.end; hour++) {
+        for (let hour = displayRange.start; hour <= displayRange.end; hour++) {
             slots.push({ hour, label: formatHour(hour) });
         }
         return slots;
-    }, [workingHours]);
+    }, [displayRange]);
 
     // Get energy level for a given hour
     const getEnergyClass = (hour: number): string => {
@@ -52,8 +85,9 @@ export function CalendarView({
         const startHour = start.getHours() + start.getMinutes() / 60;
         const endHour = end.getHours() + end.getMinutes() / 60;
 
-        const top = ((startHour - workingHours.start) / (workingHours.end - workingHours.start + 1)) * 100;
-        const height = ((endHour - startHour) / (workingHours.end - workingHours.start + 1)) * 100;
+        const range = Math.max(1, displayRange.end - displayRange.start);
+        const top = ((startHour - displayRange.start) / range) * 100;
+        const height = ((endHour - startHour) / range) * 100;
 
         return { top: `${top}%`, height: `${height}%` };
     };
@@ -61,8 +95,8 @@ export function CalendarView({
     // Current time indicator
     const now = new Date();
     const currentHour = now.getHours() + now.getMinutes() / 60;
-    const showCurrentTime = currentHour >= workingHours.start && currentHour <= workingHours.end;
-    const currentTimePosition = ((currentHour - workingHours.start) / (workingHours.end - workingHours.start + 1)) * 100;
+    const showCurrentTime = currentHour >= displayRange.start && currentHour <= displayRange.end;
+    const currentTimePosition = ((currentHour - displayRange.start) / Math.max(1, displayRange.end - displayRange.start)) * 100;
 
     const priorityColors: Record<number, string> = {
         1: "bg-gray-300 border-gray-400",
@@ -107,33 +141,50 @@ export function CalendarView({
 
                 {/* Tasks */}
                 <div className="absolute left-12 right-2 top-0 bottom-0">
-                    {tasks
-                        .filter((t) => t.scheduled_start && t.status !== "completed")
-                        .map((task) => {
-                            const style = getTaskStyle(task);
-                            if (!style) return null;
+                    {scheduledTasks.map((task) => {
+                        const style = getTaskStyle(task);
+                        if (!style) return null;
 
-                            return (
-                                <div
-                                    key={task.id}
-                                    className={cn(
-                                        "absolute left-0 right-0 rounded-md border px-2 py-1 overflow-hidden cursor-pointer transition-all hover:shadow-md hover:z-10",
-                                        priorityColors[task.priority],
-                                        task.status === "in_progress" && "ring-2 ring-primary"
-                                    )}
-                                    style={style}
-                                >
-                                    <p className="text-xs font-medium truncate">{task.title}</p>
-                                    {parseFloat(style.height) > 8 && (
-                                        <p className="text-[10px] text-muted-foreground truncate">
-                                            {task.scheduled_start && formatTime(task.scheduled_start)}
-                                        </p>
-                                    )}
-                                </div>
-                            );
-                        })}
+                        return (
+                            <div
+                                key={task.id}
+                                className={cn(
+                                    "absolute left-0 right-0 rounded-md border px-2 py-1 overflow-hidden cursor-pointer transition-all hover:shadow-md hover:z-10",
+                                    priorityColors[task.priority],
+                                    task.status === "in_progress" && "ring-2 ring-primary"
+                                )}
+                                style={style}
+                            >
+                                <p className="text-xs font-medium truncate">{task.title}</p>
+                                {parseFloat(style.height) > 8 && (
+                                    <p className="text-[10px] text-muted-foreground truncate">
+                                        {task.scheduled_start && formatTime(task.scheduled_start)}
+                                    </p>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
+
+            {unscheduledTasks.length > 0 && (
+                <div className="mt-4 border-t pt-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">
+                        Unscheduled ({unscheduledTasks.length})
+                    </p>
+                    <div className="space-y-1">
+                        {unscheduledTasks.map((task) => (
+                            <div
+                                key={task.id}
+                                className="flex items-center justify-between text-xs bg-muted/50 rounded-md px-2 py-1"
+                            >
+                                <span className="truncate">{task.title}</span>
+                                <span className="text-[10px] text-muted-foreground">P{task.priority}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

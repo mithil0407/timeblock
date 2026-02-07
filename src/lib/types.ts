@@ -104,10 +104,12 @@ export interface CreateTaskRequest {
     input: string;
     deadline?: string;
     context?: string;
+    timeZone?: string;
 }
 
 export interface CreateTaskResponse {
-    task: Task;
+    task?: Task;
+    tasks?: Task[];
     notification: {
         message: string;
     };

@@ -368,14 +368,16 @@ async function rescheduleRemainingTasks({
         .select("*")
         .eq("user_id", user.id);
 
+    const resolvedTimeZone = getTimezoneFromMemory(userMemory || []) || "UTC";
+
     const { data: tasks } = await supabase
         .from("tasks")
         .select("*")
         .eq("user_id", user.id)
         .eq("status", "scheduled");
 
-    const startOfDay = getStartOfDay();
-    const endOfDay = getEndOfDay();
+    const startOfDay = getStartOfDay(new Date(), resolvedTimeZone);
+    const endOfDay = getEndOfDay(new Date(), resolvedTimeZone);
     const now = new Date();
 
     const tasksToReschedule = (tasks || [])
@@ -422,6 +424,7 @@ async function rescheduleRemainingTasks({
             existingTasks: plannedTasks,
             ignoreEventIds,
             busySlots,
+            timeZone: resolvedTimeZone,
         });
 
         const fallbackSlot =
@@ -506,4 +509,22 @@ async function rescheduleRemainingTasks({
             message: "Your schedule has been updated based on your latest changes.",
         });
     }
+}
+
+function getTimezoneFromMemory(userMemory: Array<{ memory_type: string; key: string; value: unknown }>): string | null {
+    const prefs = userMemory.filter((m) => m.memory_type === "preferences");
+    for (const pref of prefs) {
+        if (pref.key === "timezone") {
+            if (typeof pref.value === "string") return pref.value;
+            if (pref.value && typeof pref.value === "object") {
+                const tz = (pref.value as { timezone?: string }).timezone;
+                if (tz) return tz;
+            }
+        }
+        if (pref.key === "default" && pref.value && typeof pref.value === "object") {
+            const tz = (pref.value as { timezone?: string }).timezone;
+            if (tz) return tz;
+        }
+    }
+    return null;
 }

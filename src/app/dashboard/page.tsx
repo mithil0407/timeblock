@@ -18,7 +18,7 @@ export default function DashboardPage() {
     const { tasks, setTasks, addTask, updateTask, removeTask, isLoading: tasksLoading, setLoading: setTasksLoading } = useTaskStore();
     const { notifications, unreadCount, setNotifications, markAsRead, markAllAsRead } = useNotificationStore();
     const { user, setUser, setLoading: setUserLoading, isLoading: userLoading } = useUserStore();
-    const { memory, setMemory } = useMemoryStore();
+    const { memory, setMemory, updateMemory } = useMemoryStore();
 
     // UI state
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,8 +71,9 @@ export default function DashboardPage() {
         async function fetchTasks() {
             setTasksLoading(true);
             try {
-                const date = new Date().toISOString().split("T")[0];
-                const res = await fetch(`/api/tasks?date=${date}`);
+                const date = new Date().toLocaleDateString("en-CA");
+                const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                const res = await fetch(`/api/tasks?date=${date}&tz=${encodeURIComponent(tz)}`);
                 if (res.ok) {
                     const data = await res.json();
                     setTasks(data.tasks);
@@ -122,6 +123,32 @@ export default function DashboardPage() {
         fetchMemory();
     }, [user, setMemory]);
 
+    // Persist timezone if missing
+    useEffect(() => {
+        if (!memory) return;
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const storedTz =
+            (memory.preferences?.timezone as { timezone?: string } | undefined)?.timezone ||
+            (memory.preferences?.timezone as string | undefined) ||
+            (memory.preferences?.default as { timezone?: string } | undefined)?.timezone;
+
+        if (tz && !storedTz) {
+            fetch("/api/memory", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    memoryType: "preferences",
+                    key: "timezone",
+                    value: tz,
+                }),
+            }).then(() => {
+                updateMemory("preferences", "timezone", tz);
+            }).catch(() => {
+                // Silent fallback
+            });
+        }
+    }, [memory, updateMemory]);
+
     // Handlers
     const handleSubmit = useCallback(async (input: string, options?: { deadline?: string; context?: string }) => {
         setIsSubmitting(true);
@@ -133,6 +160,7 @@ export default function DashboardPage() {
                     input,
                     deadline: options?.deadline,
                     context: options?.context,
+                    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
                 }),
             });
 
@@ -141,11 +169,18 @@ export default function DashboardPage() {
             }
 
             const data = await res.json();
-            addTask(data.task as Task);
+            if (data.tasks && Array.isArray(data.tasks)) {
+                for (const task of data.tasks) {
+                    addTask(task as Task);
+                }
+            } else if (data.task) {
+                addTask(data.task as Task);
+            }
 
+            const createdCount = Array.isArray(data.tasks) ? data.tasks.length : 1;
             toast({
-                title: "Task Created",
-                description: data.notification.message,
+                title: createdCount > 1 ? "Tasks Created" : "Task Created",
+                description: data.notification?.message || "Task created",
                 variant: "success",
             });
         } catch (err) {
@@ -338,7 +373,7 @@ export default function DashboardPage() {
 
                     {/* Calendar view (side panel on large screens) */}
                     {view === "calendar" && (
-                        <div className="hidden lg:block h-[calc(100vh-140px)] sticky top-[88px]">
+                        <div className="h-[calc(100vh-140px)] sticky top-[88px]">
                             <CalendarView
                                 tasks={tasks as Task[]}
                                 workingHours={memory?.workingHours}

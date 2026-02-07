@@ -58,7 +58,7 @@ export function TaskInput({ onSubmit, isLoading }: TaskInputProps) {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="What do you need to do? (e.g., 'Edit ad for Nike, due tomorrow')"
+                            placeholder="What do you need to do? (Use ';' or commas for multiple tasks)"
                             className="h-12 text-base pr-10"
                             disabled={isLoading}
                         />
@@ -117,6 +117,9 @@ export function TaskInput({ onSubmit, isLoading }: TaskInputProps) {
                         <p className="text-xs text-muted-foreground">
                             Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">Enter</kbd> to add task,
                             <kbd className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono ml-1">⌘+Enter</kbd> to toggle details
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Tip: add multiple tasks in one line using <kbd className="px-1 py-0.5 bg-muted rounded text-xs font-mono">;</kbd> or commas.
                         </p>
                     </div>
                 )}

@@ -7,6 +7,7 @@ import { findOptimalSlot, calculatePriority } from "@/lib/scheduling";
 import { createEvent } from "@/lib/google-calendar";
 import { setCredentials } from "@/lib/google-auth";
 import type { CreateTaskRequest, CreateTaskResponse, Task } from "@/lib/types";
+import { getEndOfDayInTimeZone, getStartOfDayInTimeZone, zonedTimeToUtc } from "@/lib/timezone";
 
 // GET /api/tasks - List tasks
 export async function GET(request: NextRequest) {
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const date = searchParams.get("date"); // YYYY-MM-DD format
     const status = searchParams.get("status");
+    const tz = searchParams.get("tz");
 
     // Build query
     let query = supabase
@@ -34,9 +36,26 @@ export async function GET(request: NextRequest) {
         .order("scheduled_start", { ascending: true, nullsFirst: false });
 
     if (date) {
-        const startOfDay = `${date}T00:00:00`;
-        const endOfDay = `${date}T23:59:59`;
-        query = query.gte("scheduled_start", startOfDay).lte("scheduled_start", endOfDay);
+        if (tz) {
+            const [year, month, day] = date.split("-").map((v) => parseInt(v, 10));
+            if (!Number.isNaN(year) && !Number.isNaN(month) && !Number.isNaN(day)) {
+                const startOfDay = zonedTimeToUtc(
+                    { year, month, day, hour: 0, minute: 0, second: 0 },
+                    tz
+                );
+                const endOfDay = zonedTimeToUtc(
+                    { year, month, day, hour: 23, minute: 59, second: 59 },
+                    tz
+                );
+                query = query
+                    .gte("scheduled_start", startOfDay.toISOString())
+                    .lte("scheduled_start", endOfDay.toISOString());
+            }
+        } else {
+            const startOfDay = `${date}T00:00:00`;
+            const endOfDay = `${date}T23:59:59`;
+            query = query.gte("scheduled_start", startOfDay).lte("scheduled_start", endOfDay);
+        }
     }
 
     if (status) {
@@ -76,164 +95,220 @@ export async function POST(request: NextRequest) {
 
     try {
         const body: CreateTaskRequest = await request.json();
-        const { input, deadline, context } = body;
+        const { input, deadline, context, timeZone } = body;
 
         if (!input || typeof input !== "string") {
             return NextResponse.json({ error: "Task input is required" }, { status: 400 });
         }
 
-        // 1. Parse task with AI
-        const parsed = await parseTaskInput(input);
+        const inputs = splitTaskInput(input);
 
-        // 2. Get user memory
+        // 1. Get user memory
         const { data: userMemory } = await supabase
             .from("user_memory")
             .select("*")
             .eq("user_id", user.id);
 
-        // 3. Get existing tasks for today
-        const today = new Date().toISOString().split("T")[0];
+        const resolvedTimeZone =
+            timeZone ||
+            getTimezoneFromMemory(userMemory || []) ||
+            "UTC";
+
+        if (timeZone && timeZone !== getTimezoneFromMemory(userMemory || [])) {
+            await supabase.from("user_memory").upsert(
+                {
+                    user_id: user.id,
+                    memory_type: "preferences",
+                    key: "timezone",
+                    value: timeZone,
+                },
+                { onConflict: "user_id,memory_type,key" }
+            );
+        }
+
+        // 2. Get existing tasks for scheduling window
+        const windowStart = getStartOfDayInTimeZone(new Date(), resolvedTimeZone);
+        const windowEnd = getEndOfDayInTimeZone(
+            new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            resolvedTimeZone
+        );
         const { data: existingTasks } = await supabase
             .from("tasks")
             .select("*")
             .eq("user_id", user.id)
             .eq("status", "scheduled")
-            .gte("scheduled_start", `${today}T00:00:00`)
-            .lte("scheduled_start", `${today}T23:59:59`);
+            .gte("scheduled_start", windowStart.toISOString())
+            .lte("scheduled_start", windowEnd.toISOString());
 
-        // 4. Estimate duration
-        const { estimatedMinutes } = await estimateTaskDuration(
-            parsed.title,
-            parsed.suggestedCategory,
-            []
-        );
+        const plannedTasks: Task[] = [];
+        const createdTasks: Task[] = [];
+        const changeLog: Array<{
+            taskId: string;
+            newStart?: string;
+            newEnd?: string;
+            action: "created";
+        }> = [];
 
-        // 5. Calculate priority
-        const taskDeadline = deadline || parsed.deadline;
-        let priority: number;
+        for (const rawInput of inputs) {
+            // 3. Parse task with AI
+            const parsed = await parseTaskInput(rawInput, [], { timeZone: resolvedTimeZone });
 
-        if (taskDeadline) {
-            const { priority: aiPriority } = await assessPriority(
-                parsed.title,
-                parsed.description,
-                parsed.suggestedCategory,
-                taskDeadline,
-                (existingTasks || []).map((t) => ({
-                    title: t.title,
-                    priority: t.priority,
-                    deadline: t.deadline,
-                }))
-            );
-            priority = aiPriority;
-        } else {
-            priority = calculatePriority({
+            // 4. Estimate duration
+            const estimate =
+                parsed.explicitDuration ??
+                (await estimateTaskDuration(parsed.title, parsed.suggestedCategory, [])).estimatedMinutes;
+            const estimatedMinutes = Math.max(15, Math.min(480, estimate));
+
+            // 5. Calculate priority
+            let taskDeadline = deadline || parsed.deadline;
+            if (taskDeadline) {
+                const deadlineDate = new Date(taskDeadline);
+                if (deadlineDate.getTime() < Date.now() - 60 * 1000) {
+                    taskDeadline = null;
+                }
+            }
+
+            let priority = calculatePriority({
                 deadline: taskDeadline,
                 taskType: parsed.suggestedCategory,
                 existingTasks: existingTasks || [],
             });
-        }
 
-        // 6. Find optimal time slot
-        let scheduledStart: Date | null = null;
-        let scheduledEnd: Date | null = null;
-        let googleEventId: string | null = null;
+            try {
+                const { priority: aiPriority } = await assessPriority(
+                    parsed.title,
+                    parsed.description,
+                    parsed.suggestedCategory,
+                    taskDeadline,
+                    [...(existingTasks || []), ...plannedTasks].map((t) => ({
+                        title: t.title,
+                        priority: t.priority,
+                        deadline: t.deadline || undefined,
+                    }))
+                );
+                priority = aiPriority;
+            } catch {
+                // Keep heuristic priority
+            }
 
-        if (user.google_access_token) {
-            const auth = setCredentials({
-                access_token: user.google_access_token,
-                refresh_token: user.google_refresh_token,
-            });
+            // 6. Find optimal time slot
+            let scheduledStart: Date | null = null;
+            let scheduledEnd: Date | null = null;
+            let googleEventId: string | null = null;
 
-            const slot = await findOptimalSlot({
-                auth,
-                duration: estimatedMinutes,
-                priority,
-                energyRequirement: parsed.energyRequirement,
-                userMemory: userMemory || [],
-                existingTasks: existingTasks || [],
-            });
+            if (user.google_access_token) {
+                const auth = setCredentials({
+                    access_token: user.google_access_token,
+                    refresh_token: user.google_refresh_token,
+                });
 
-            if (slot) {
-                scheduledStart = slot.start;
-                scheduledEnd = slot.end;
+                const slot = await findOptimalSlot({
+                    auth,
+                    duration: estimatedMinutes,
+                    priority,
+                    energyRequirement: parsed.energyRequirement,
+                    userMemory: userMemory || [],
+                    existingTasks: [...(existingTasks || []), ...plannedTasks],
+                    timeZone: resolvedTimeZone,
+                });
 
-                // 7. Create Google Calendar event
-                try {
-                    googleEventId = await createEvent(auth, {
-                        summary: parsed.title,
-                        description: context || parsed.description || undefined,
-                        start: scheduledStart,
-                        end: scheduledEnd,
-                    });
-                } catch (calError) {
-                    console.error("Failed to create calendar event:", calError);
-                    // Continue without calendar event
+                if (slot) {
+                    scheduledStart = slot.start;
+                    scheduledEnd = slot.end;
+
+                    // 7. Create Google Calendar event
+                    try {
+                        googleEventId = await createEvent(auth, {
+                            summary: parsed.title,
+                            description: context || parsed.description || undefined,
+                            start: scheduledStart,
+                            end: scheduledEnd,
+                            timeZone: resolvedTimeZone,
+                        });
+                    } catch (calError) {
+                        console.error("Failed to create calendar event:", calError);
+                        // Continue without calendar event
+                    }
                 }
             }
-        }
 
-        // 8. Create task in database
-        const { data: task, error: createError } = await supabase
-            .from("tasks")
-            .insert({
-                user_id: user.id,
-                title: parsed.title,
-                description: context || parsed.description,
-                estimated_duration_minutes: estimatedMinutes,
-                priority,
-                deadline: taskDeadline,
-                scheduled_start: scheduledStart?.toISOString(),
-                scheduled_end: scheduledEnd?.toISOString(),
-                status: "scheduled",
-                google_calendar_event_id: googleEventId,
-                task_category: parsed.suggestedCategory,
-                energy_requirement: parsed.energyRequirement,
-                context,
-            })
-            .select()
-            .single();
+            // 8. Create task in database
+            const { data: task, error: createError } = await supabase
+                .from("tasks")
+                .insert({
+                    user_id: user.id,
+                    title: parsed.title,
+                    description: context || parsed.description,
+                    estimated_duration_minutes: estimatedMinutes,
+                    priority,
+                    deadline: taskDeadline,
+                    scheduled_start: scheduledStart?.toISOString(),
+                    scheduled_end: scheduledEnd?.toISOString(),
+                    status: "scheduled",
+                    google_calendar_event_id: googleEventId,
+                    task_category: parsed.suggestedCategory,
+                    energy_requirement: parsed.energyRequirement,
+                    context,
+                })
+                .select()
+                .single();
 
-        if (createError) {
-            console.error("Error creating task:", createError);
-            return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
-        }
+            if (createError) {
+                console.error("Error creating task:", createError);
+                return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
+            }
 
-        // 9. Create notification
-        const notificationType = scheduledStart ? "task_blocked" : "conflict_detected";
-        const { data: notification } = await supabase
-            .from("notifications")
-            .insert({
+            const scheduledMessage = scheduledStart
+                ? new Intl.DateTimeFormat("en-US", {
+                    timeZone: resolvedTimeZone,
+                    hour: "numeric",
+                    minute: "2-digit",
+                }).format(scheduledStart)
+                : null;
+
+            // 9. Create notification
+            const notificationType = scheduledStart ? "task_blocked" : "conflict_detected";
+            await supabase.from("notifications").insert({
                 user_id: user.id,
                 type: notificationType,
                 title: "Task Scheduled",
                 message: scheduledStart
-                    ? `"${parsed.title}" scheduled for ${scheduledStart.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+                    ? `"${parsed.title}" scheduled for ${scheduledMessage}`
                     : `"${parsed.title}" added but no time slot available today`,
                 related_task_id: task.id,
-            })
-            .select()
-            .single();
+            });
 
-        // 10. Log schedule change
+            // 10. Log schedule change
+            changeLog.push({
+                taskId: task.id,
+                newStart: scheduledStart?.toISOString(),
+                newEnd: scheduledEnd?.toISOString(),
+                action: "created",
+            });
+
+            plannedTasks.push(task as Task);
+            createdTasks.push(task as Task);
+        }
+
         await supabase.from("schedule_changes").insert({
             user_id: user.id,
             trigger_type: "task_added",
-            trigger_task_id: task.id,
-            changes_made: [
-                {
-                    taskId: task.id,
-                    newStart: scheduledStart?.toISOString(),
-                    newEnd: scheduledEnd?.toISOString(),
-                    action: "created",
-                },
-            ],
-            ai_reasoning: scheduledStart ? "Initial scheduling for new task" : "No available slot found today",
+            trigger_task_id: createdTasks[0]?.id ?? null,
+            changes_made: changeLog,
+            ai_reasoning:
+                createdTasks.length > 1
+                    ? "Batch scheduling for new tasks"
+                    : "Initial scheduling for new task",
         });
 
         const response: CreateTaskResponse = {
-            task: task as Task,
+            task: createdTasks.length === 1 ? (createdTasks[0] as Task) : undefined,
+            tasks: createdTasks.length > 1 ? createdTasks : undefined,
             notification: {
-                message: notification?.message || "Task created",
+                message:
+                    createdTasks.length > 1
+                        ? `${createdTasks.length} tasks created`
+                        : "Task created",
             },
         };
 
@@ -245,4 +320,50 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
+}
+
+function splitTaskInput(input: string): string[] {
+    const trimmed = input.trim();
+    if (!trimmed) return [];
+
+    const newlineSplit = trimmed.split(/\n+/).map((part) => part.trim()).filter(Boolean);
+    if (newlineSplit.length > 1) {
+        return newlineSplit.flatMap((part) => part.split(/\s*;\s*/)).filter(Boolean);
+    }
+
+    const semicolonSplit = trimmed.split(/\s*;\s*/).map((part) => part.trim()).filter(Boolean);
+    if (semicolonSplit.length > 1) {
+        return semicolonSplit;
+    }
+
+    const commaSplit = trimmed.split(/\s*,\s*/).map((part) => part.trim()).filter(Boolean);
+    if (commaSplit.length > 1) {
+        const deadlineKeywords = ["due", "by", "tomorrow", "today", "tonight", "eod", "eow", "eom", "next", "at", "on"];
+        const looksLikeSingleTask = commaSplit.slice(1).some((part) =>
+            deadlineKeywords.some((keyword) => part.toLowerCase().startsWith(keyword))
+        );
+        if (!looksLikeSingleTask) {
+            return commaSplit;
+        }
+    }
+
+    return [trimmed];
+}
+
+function getTimezoneFromMemory(userMemory: Array<{ memory_type: string; key: string; value: unknown }>): string | null {
+    const prefs = userMemory.filter((m) => m.memory_type === "preferences");
+    for (const pref of prefs) {
+        if (pref.key === "timezone") {
+            if (typeof pref.value === "string") return pref.value;
+            if (pref.value && typeof pref.value === "object") {
+                const tz = (pref.value as { timezone?: string }).timezone;
+                if (tz) return tz;
+            }
+        }
+        if (pref.key === "default" && pref.value && typeof pref.value === "object") {
+            const tz = (pref.value as { timezone?: string }).timezone;
+            if (tz) return tz;
+        }
+    }
+    return null;
 }

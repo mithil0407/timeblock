@@ -85,7 +85,11 @@ interface MemoryStore {
     memory: StructuredMemory | null;
     isLoading: boolean;
     setMemory: (memory: StructuredMemory) => void;
-    updateMemory: (type: string, key: string, value: Record<string, unknown>) => void;
+    updateMemory: (
+        type: string,
+        key: string,
+        value: Record<string, unknown> | string | number | boolean | null
+    ) => void;
     setLoading: (loading: boolean) => void;
 }
 

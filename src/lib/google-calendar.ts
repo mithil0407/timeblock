@@ -30,7 +30,7 @@ export async function createEvent(
         description,
         start,
         end,
-        timeZone = "Asia/Kolkata",
+        timeZone = "UTC",
     }: {
         summary: string;
         description?: string;
@@ -95,14 +95,14 @@ export async function updateEvent(
     if (updates.start) {
         updatedEvent.start = {
             dateTime: updates.start.toISOString(),
-            timeZone: existingEvent.data.start?.timeZone || "Asia/Kolkata",
+            timeZone: existingEvent.data.start?.timeZone || "UTC",
         };
     }
 
     if (updates.end) {
         updatedEvent.end = {
             dateTime: updates.end.toISOString(),
-            timeZone: existingEvent.data.end?.timeZone || "Asia/Kolkata",
+            timeZone: existingEvent.data.end?.timeZone || "UTC",
         };
     }
 

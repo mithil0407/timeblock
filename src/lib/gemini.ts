@@ -62,8 +62,16 @@ export async function callGemini<T>({
 
 export async function parseTaskInput(
     userInput: string,
-    taskHistory: string[] = []
+    taskHistory: string[] = [],
+    options?: { timeZone?: string; now?: Date }
 ): Promise<ParsedTask> {
+    const timeZone = options?.timeZone || "UTC";
+    const now = options?.now || new Date();
+    const localNow = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        dateStyle: "full",
+        timeStyle: "short",
+    }).format(now);
     const prompt = `
 Parse this task input and extract structured information:
 "${userInput}"
@@ -82,7 +90,8 @@ Return JSON with:
   "energyRequirement": "high, medium, or low based on task nature"
 }
 
-Current date/time for reference: ${new Date().toISOString()}
+User timezone: ${timeZone}
+Current local date/time for reference: ${localNow}
 `;
 
     try {
