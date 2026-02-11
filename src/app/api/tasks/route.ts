@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
 import { getOrCreateUserByEmail } from "@/lib/supabase/user";
 import { cookies } from "next/headers";
-import { parseTaskInput, estimateTaskDuration, assessPriority } from "@/lib/gemini";
+import { parseTaskInput, estimateTaskDuration, assessPriority, generateTaskDescription } from "@/lib/gemini";
 import { findOptimalSlot, calculatePriority } from "@/lib/scheduling";
 import { createEvent } from "@/lib/google-calendar";
 import { setCredentials } from "@/lib/google-auth";
 import type { CreateTaskRequest, CreateTaskResponse, Task } from "@/lib/types";
 import { getEndOfDayInTimeZone, getStartOfDayInTimeZone, zonedTimeToUtc } from "@/lib/timezone";
+import { loadBusinessContext } from "@/lib/business-context";
 
 // GET /api/tasks - List tasks
 export async function GET(request: NextRequest) {
@@ -149,6 +150,13 @@ export async function POST(request: NextRequest) {
             action: "created";
         }> = [];
 
+        let businessContext: string | null = null;
+        try {
+            businessContext = await loadBusinessContext();
+        } catch (error) {
+            console.warn("Failed to load business context:", error);
+        }
+
         for (const rawInput of inputs) {
             // 3. Parse task with AI
             const parsed = await parseTaskInput(rawInput, [], { timeZone: resolvedTimeZone });
@@ -195,6 +203,7 @@ export async function POST(request: NextRequest) {
             let scheduledStart: Date | null = null;
             let scheduledEnd: Date | null = null;
             let googleEventId: string | null = null;
+            let enrichedDescription: string | null = context || parsed.description || null;
 
             if (user.google_access_token) {
                 const auth = setCredentials({
@@ -216,11 +225,25 @@ export async function POST(request: NextRequest) {
                     scheduledStart = slot.start;
                     scheduledEnd = slot.end;
 
+                    if (businessContext) {
+                        try {
+                            const { description } = await generateTaskDescription({
+                                taskTitle: parsed.title,
+                                parsedDescription: parsed.description,
+                                userContext: context || null,
+                                businessContext,
+                            });
+                            enrichedDescription = description || enrichedDescription;
+                        } catch {
+                            // Keep fallback description
+                        }
+                    }
+
                     // 7. Create Google Calendar event
                     try {
                         googleEventId = await createEvent(auth, {
                             summary: parsed.title,
-                            description: context || parsed.description || undefined,
+                            description: enrichedDescription || undefined,
                             start: scheduledStart,
                             end: scheduledEnd,
                             timeZone: resolvedTimeZone,
@@ -238,7 +261,7 @@ export async function POST(request: NextRequest) {
                 .insert({
                     user_id: user.id,
                     title: parsed.title,
-                    description: context || parsed.description,
+                    description: enrichedDescription,
                     estimated_duration_minutes: estimatedMinutes,
                     priority,
                     deadline: taskDeadline,

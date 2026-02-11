@@ -109,9 +109,12 @@ export function TaskInput({ onSubmit, isLoading }: TaskInputProps) {
                                 <Input
                                     value={context}
                                     onChange={(e) => setContext(e.target.value)}
-                                    placeholder="Any extra details..."
+                                    placeholder="Example: prep notes, location, links, attendees"
                                     className="h-10"
                                 />
+                                <p className="text-xs text-muted-foreground">
+                                    This context is used to generate richer time blocks and is added to the Google Calendar event description.
+                                </p>
                             </div>
                         </div>
                         <p className="text-xs text-muted-foreground">

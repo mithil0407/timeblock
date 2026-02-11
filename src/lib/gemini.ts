@@ -33,6 +33,10 @@ interface ScheduleOptimization {
     }>;
 }
 
+interface TaskDescriptionResult {
+    description: string;
+}
+
 export async function callGemini<T>({
     prompt,
     temperature = 0.7,
@@ -274,6 +278,51 @@ Return JSON:
         return {
             reasoning: "Unable to optimize due to AI unavailability",
             schedule: [],
+        };
+    }
+}
+
+export async function generateTaskDescription({
+    taskTitle,
+    parsedDescription,
+    userContext,
+    businessContext,
+}: {
+    taskTitle: string;
+    parsedDescription: string | null;
+    userContext: string | null;
+    businessContext: string;
+}): Promise<TaskDescriptionResult> {
+    const prompt = `
+You are generating a detailed Google Calendar event description for a time block.
+
+Task title: "${taskTitle}"
+User-provided context: "${userContext || "None"}"
+Parsed context: "${parsedDescription || "None"}"
+
+Business context (for grounding; do not repeat verbatim unless relevant):
+${businessContext}
+
+Write a concise, action-oriented description that clarifies what work will be done.
+Include sections only if relevant:
+- Objective
+- Key steps
+- Assets/links
+- Metrics or KPI targets
+
+Do not invent specific numbers or links that are not in context.
+Return JSON:
+{
+  "description": "string"
+}
+`;
+
+    try {
+        return await callGemini<TaskDescriptionResult>({ prompt, temperature: 0.4 });
+    } catch (error) {
+        console.error("Failed to generate task description:", error);
+        return {
+            description: userContext || parsedDescription || taskTitle,
         };
     }
 }
